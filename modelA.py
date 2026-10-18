@@ -5,7 +5,7 @@ from tensorflow import keras
 from tensorflow.keras import layers
 import matplotlib.pyplot as plt
 
-DATASET_DIR = Path("dataset")
+DATASET_DIR = Path("dataset6")
 IMG_SIZE = (64, 64)
 BATCH_SIZE = 32
 SEED = 42
@@ -108,32 +108,6 @@ model.compile(
 )
 
 model.summary()
-
-# model = keras.Sequential([
-#     layers.Input(shape=(64, 64, 3)),
-
-#     layers.Conv2D(16, 3, padding="same", activation="relu"),
-#     layers.MaxPooling2D(2),
-
-#     layers.Conv2D(32, 3, padding="same", activation="relu"),
-#     layers.MaxPooling2D(2),
-
-#     layers.Conv2D(64, 3, padding="same", activation="relu"),
-#     layers.MaxPooling2D(2),
-
-#     layers.GlobalAveragePooling2D(),
-#     layers.Dense(32, activation="relu"),
-#     layers.Dropout(0.4),
-#     layers.Dense(num_classes, activation="softmax")
-# ])
-
-# model.compile(
-#     optimizer=keras.optimizers.Adam(learning_rate=0.0003),
-#     loss="sparse_categorical_crossentropy",
-#     metrics=["accuracy"]
-# )
-
-# model.summary()
 
 # Train using the existing training and validation datasets
 history = model.fit(
