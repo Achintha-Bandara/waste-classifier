@@ -1,12 +1,12 @@
 {
-  "created_at_utc": "2026-10-18T17:18:39.262041+00:00",
+  "created_at_utc": "2026-10-18T18:21:14.670786+00:00",
   "dataset": "/mnt/c/Users/achin/Documents/Semester 5 Modules/EN3150 - Pattern Recognition/waste-classifier/dataset6",
   "image_size": [
     64,
     64
   ],
   "batch_size": 32,
-  "epochs": 20,
+  "epochs": 40,
   "seed": 42,
   "class_names": [
     "Cardboard",

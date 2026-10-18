@@ -15,7 +15,7 @@ RESULTS_DIR = PROJECT_DIR / "results" / "modelA"
 IMG_SIZE = (64, 64)
 BATCH_SIZE = 32
 SEED = 42
-EPOCHS = 50
+EPOCHS = 40
 
 RESULTS_DIR.mkdir(parents=True, exist_ok=True)
 

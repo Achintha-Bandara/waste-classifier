@@ -1,0 +1,90 @@
+{
+  "optimizer": "SGD_Momentum",
+  "learning_rate_initial": 0.01,
+  "momentum": 0.9,
+  "test_loss": 0.953490674495697,
+  "test_accuracy": 0.6521739130434783,
+  "test_macro_precision": 0.6725633255965371,
+  "test_macro_recall": 0.6269172093669324,
+  "test_macro_f1": 0.6283817107303064,
+  "test_weighted_f1": 0.6373792715312876,
+  "classification_report": {
+    "Cardboard": {
+      "precision": 0.8928571428571429,
+      "recall": 0.7246376811594203,
+      "f1-score": 0.8,
+      "support": 69.0
+    },
+    "Food Organics": {
+      "precision": 0.6721311475409836,
+      "recall": 0.6612903225806451,
+      "f1-score": 0.6666666666666666,
+      "support": 62.0
+    },
+    "Glass": {
+      "precision": 0.6885245901639344,
+      "recall": 0.6666666666666666,
+      "f1-score": 0.6774193548387096,
+      "support": 63.0
+    },
+    "Metal": {
+      "precision": 0.5647058823529412,
+      "recall": 0.8135593220338984,
+      "f1-score": 0.6666666666666666,
+      "support": 118.0
+    },
+    "Miscellaneous Trash": {
+      "precision": 0.4888888888888889,
+      "recall": 0.29333333333333333,
+      "f1-score": 0.36666666666666664,
+      "support": 75.0
+    },
+    "Paper": {
+      "precision": 0.7678571428571429,
+      "recall": 0.5733333333333334,
+      "f1-score": 0.6564885496183206,
+      "support": 75.0
+    },
+    "Plastic": {
+      "precision": 0.6037735849056604,
+      "recall": 0.6956521739130435,
+      "f1-score": 0.6464646464646465,
+      "support": 138.0
+    },
+    "Textile Trash": {
+      "precision": 0.6470588235294118,
+      "recall": 0.22916666666666666,
+      "f1-score": 0.3384615384615385,
+      "support": 48.0
+    },
+    "Vegetation": {
+      "precision": 0.7272727272727273,
+      "recall": 0.9846153846153847,
+      "f1-score": 0.8366013071895425,
+      "support": 65.0
+    },
+    "accuracy": 0.6521739130434783,
+    "macro avg": {
+      "precision": 0.6725633255965371,
+      "recall": 0.6269172093669324,
+      "f1-score": 0.6283817107303064,
+      "support": 713.0
+    },
+    "weighted avg": {
+      "precision": 0.6580643410977999,
+      "recall": 0.6521739130434783,
+      "f1-score": 0.6373792715312876,
+      "support": 713.0
+    }
+  },
+  "total_parameters": 158057,
+  "trainable_parameters": 157417,
+  "estimated_fp32_trainable_weights_kb": 614.91015625,
+  "saved_model_size_kb": 1332.99609375,
+  "epochs_completed": 30,
+  "average_epoch_time_seconds": 9.822410774633347,
+  "best_validation_loss": 0.9540499448776245,
+  "best_validation_loss_epoch": 20,
+  "best_validation_accuracy": 0.6521739363670349,
+  "best_validation_accuracy_epoch": 20
+}
