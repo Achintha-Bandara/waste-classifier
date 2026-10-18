@@ -15,7 +15,7 @@ RESULTS_DIR = PROJECT_DIR / "results" / "modelA"
 IMG_SIZE = (64, 64)
 BATCH_SIZE = 32
 SEED = 42
-EPOCHS = 20
+EPOCHS = 50
 
 RESULTS_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -84,34 +84,37 @@ print(f"Validation: {len(X_val)} ({len(X_val)/len(paths):.1%})")
 print(f"Testing:    {len(X_test)} ({len(X_test)/len(paths):.1%})")
 print("Classes:", class_to_idx)
 
-# Define the CNN model
 num_classes = len(class_names)
 
 model = keras.Sequential([
     layers.Input(shape=(64, 64, 3)),
 
-    # First convolutional block
-    layers.Conv2D(32, (3, 3), activation="relu"),
+    # Block 1
+    layers.Conv2D(32, (3, 3), padding="same", activation="relu"),
     layers.MaxPooling2D((2, 2)),
 
-    # Second convolutional block
-    layers.Conv2D(64, (3, 3), activation="relu"),
+    # Block 2
+    layers.Conv2D(64, (3, 3), padding="same", use_bias=False),
+    layers.BatchNormalization(),
+    layers.Activation("relu"),
+    layers.MaxPooling2D((2, 2)),
+    layers.Dropout(0.10),
+
+    # Block 3
+    layers.Conv2D(128, (3, 3), padding="same", use_bias=False),
+    layers.BatchNormalization(),
+    layers.Activation("relu"),
     layers.MaxPooling2D((2, 2)),
 
-    # Classification layers
+    # Classification head
     layers.Flatten(),
     layers.Dense(128, activation="relu"),
-    layers.Dense(64, activation="relu"),
+    layers.Dropout(0.25),
     layers.Dense(num_classes, activation="softmax")
 ])
 
-learning_rate = 0.0001
-optimizer = keras.optimizers.Adam(
-    learning_rate=learning_rate
-)
-
 model.compile(
-    optimizer=optimizer,
+    optimizer=keras.optimizers.Adam(learning_rate=1e-4),
     loss="sparse_categorical_crossentropy",
     metrics=["accuracy"]
 )
@@ -119,10 +122,38 @@ model.compile(
 model.summary()
 
 # Train using the existing training and validation datasets
+callbacks = [
+    keras.callbacks.ModelCheckpoint(
+        filepath=str(RESULTS_DIR / "best_model.keras"),
+        monitor="val_loss",
+        save_best_only=True,
+        mode="min",
+        verbose=1
+    ),
+
+    keras.callbacks.EarlyStopping(
+        monitor="val_loss",
+        patience=5,
+        restore_best_weights=True,
+        mode="min",
+        verbose=1
+    ),
+
+    keras.callbacks.ReduceLROnPlateau(
+        monitor="val_loss",
+        factor=0.5,
+        patience=2,
+        min_lr=1e-6,
+        mode="min",
+        verbose=1
+    )
+]
+
 history = model.fit(
     train_ds,
     epochs=EPOCHS,
     validation_data=val_ds,
+    callbacks=callbacks,
     verbose=2
 )
 

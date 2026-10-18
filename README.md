@@ -27,3 +27,11 @@ Run `modelA.py` from any working directory after placing the RealWaste dataset i
 - `run_metadata.json`: dataset, split, model-run, and class metadata
 - `loss_curve.png` and `accuracy_curve.png`: training and validation curves
 - `class_distribution.png`: number of images per class
+
+### Confusion matrix
+
+After training, run `plot_confusion_matrix.py` to load `results/modelA/model.keras`
+and generate the test-set confusion matrix. The script saves:
+
+- `results/modelA/confusion_matrix.png`: labeled confusion-matrix plot
+- `results/modelA/confusion_matrix.csv`: raw confusion-matrix values
