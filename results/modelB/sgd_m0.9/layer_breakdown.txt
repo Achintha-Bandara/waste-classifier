@@ -1,0 +1,35 @@
+Layer                       Type                  Output shape          Params   Trainable          MACs
+--------------------------------------------------------------------------------------------------------
+conv2d                      Conv2D                (64, 64, 16)             432         432     1,769,472
+batch_normalization         BatchNormalization    (64, 64, 16)              64          32             0
+re_lu                       ReLU                  (64, 64, 16)               0           0             0
+max_pooling2d               MaxPooling2D          (32, 32, 16)               0           0             0
+separable_conv2d            SeparableConv2D       (32, 32, 32)             656         656       671,744
+batch_normalization_1       BatchNormalization    (32, 32, 32)             128          64             0
+re_lu_1                     ReLU                  (32, 32, 32)               0           0             0
+max_pooling2d_1             MaxPooling2D          (16, 16, 32)               0           0             0
+separable_conv2d_1          SeparableConv2D       (16, 16, 64)           2,336       2,336       598,016
+batch_normalization_2       BatchNormalization    (16, 16, 64)             256         128             0
+re_lu_2                     ReLU                  (16, 16, 64)               0           0             0
+separable_conv2d_2          SeparableConv2D       (16, 16, 64)           4,672       4,672     1,196,032
+batch_normalization_3       BatchNormalization    (16, 16, 64)             256         128             0
+re_lu_3                     ReLU                  (16, 16, 64)               0           0             0
+max_pooling2d_2             MaxPooling2D          (8, 8, 64)                 0           0             0
+dropout                     Dropout               (8, 8, 64)                 0           0             0
+separable_conv2d_3          SeparableConv2D       (8, 8, 128)            8,768       8,768       561,152
+batch_normalization_4       BatchNormalization    (8, 8, 128)              512         256             0
+re_lu_4                     ReLU                  (8, 8, 128)                0           0             0
+separable_conv2d_4          SeparableConv2D       (8, 8, 128)           17,536      17,536     1,122,304
+batch_normalization_5       BatchNormalization    (8, 8, 128)              512         256             0
+re_lu_5                     ReLU                  (8, 8, 128)                0           0             0
+max_pooling2d_3             MaxPooling2D          (4, 4, 128)                0           0             0
+dropout_1                   Dropout               (4, 4, 128)                0           0             0
+separable_conv2d_5          SeparableConv2D       (4, 4, 256)           33,920      33,920       542,720
+batch_normalization_6       BatchNormalization    (4, 4, 256)            1,024         512             0
+re_lu_6                     ReLU                  (4, 4, 256)                0           0             0
+global_average_pooling2d    GlobalAveragePooling2D(256,)                     0           0             0
+dense                       Dense                 (64,)                 16,448      16,448        16,384
+dropout_2                   Dropout               (64,)                      0           0             0
+dense_1                     Dense                 (9,)                     585         585           576
+--------------------------------------------------------------------------------------------------------
+TOTAL                                                                   88,105      86,729     6,478,400

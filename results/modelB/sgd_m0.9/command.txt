@@ -1,0 +1,10 @@
+python modelB.py --optimizer sgd_m0.9
+{
+  "aug": "none",
+  "epochs": 50,
+  "optimizer": "sgd_m0.9",
+  "batch_size": 32,
+  "seed": 42,
+  "dataset": null,
+  "no_cache": false
+}
