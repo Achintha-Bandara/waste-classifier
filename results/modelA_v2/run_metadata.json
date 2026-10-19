@@ -1,5 +1,17 @@
 {
-  "created_at_utc": "2026-10-19T03:14:12.926988+00:00",
+  "created_at_utc": "2026-10-19T05:29:23.228772+00:00",
+  "command": "python modelA.py",
+  "arguments": {
+    "arch": "deep",
+    "aug": "none",
+    "epochs": 50,
+    "optimizers": "adam,sgd,sgd_m0.9",
+    "batch_size": 32,
+    "seed": 42,
+    "dataset": null,
+    "tag": "modelA_v2",
+    "no_cache": false
+  },
   "model": "Model A (Standard CNN, improved)",
   "dataset": "/mnt/c/Users/achin/Documents/Semester 5 Modules/EN3150 - Pattern Recognition/waste-classifier/dataset6",
   "image_size": [
@@ -9,9 +21,15 @@
   "batch_size": 32,
   "epochs_requested": 50,
   "seed": 42,
-  "main_optimizer": "SGD + Momentum 0.5 (lr=0.01)",
+  "optimizers_compared": [
+    "Adam (lr=1e-4)",
+    "SGD (lr=0.01, momentum=0)",
+    "SGD + Momentum 0.9 (lr=0.01)"
+  ],
+  "main_optimizer": "SGD (lr=0.01, momentum=0)",
   "loss": "SparseCategoricalCrossentropy(from_logits=True)",
-  "augmentation": "flip(h+v), rotation 0.15, zoom 0.15, translation 0.10, contrast 0.2, brightness 0.2 (train only)",
+  "augmentation": "none",
+  "architecture": "deep",
   "lr_schedule": "ReduceLROnPlateau(factor=0.5, patience=4, min_lr=1e-6)",
   "class_names": [
     "Cardboard",

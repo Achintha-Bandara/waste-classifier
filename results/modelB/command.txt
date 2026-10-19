@@ -1,0 +1,11 @@
+python modelB.py
+{
+  "aug": "none",
+  "epochs": 50,
+  "optimizers": "adam,sgd,sgd_m0.9",
+  "batch_size": 32,
+  "seed": 42,
+  "dataset": null,
+  "tag": "modelB",
+  "no_cache": false
+}

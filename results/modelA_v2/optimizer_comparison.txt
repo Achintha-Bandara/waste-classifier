@@ -1,10 +1,8 @@
-Model A (Standard CNN, improved): optimizer comparison (50 epochs each, same seed/init)
+Model A (Standard CNN, improved) [deep, aug=none]: optimizer comparison (50 epochs each, same seed/init)
+Command: python modelA.py
 
-Optimizer                          BestValLoss  @Ep  ValAcc  TestAcc  MacroF1  s/epoch
---------------------------------------------------------------------------------------
-Adam (lr=1e-4)                          1.4536    5  0.4769   0.4460   0.3761     4.42
-Adam (lr=1e-3)                          1.7490   21  0.3759   0.3787   0.2847     4.42
-SGD (lr=0.01, momentum=0)               1.4515   22  0.5133   0.5021   0.4494     4.31
-SGD + Momentum 0.5 (lr=0.01)            1.2853   39  0.5344   0.5217   0.4812     4.28
-SGD + Momentum 0.9 (lr=0.01)            1.5605   39  0.4446   0.4544   0.3580     4.45
-SGD + Momentum 0.99 (lr=0.01)           2.1414   45  0.1935   0.1935   0.0360     4.29
+Optimizer                          BestValLoss  @Ep  ValAcc  TestAcc  MacroF1   Prec    Rec s/ep(med)
+-----------------------------------------------------------------------------------------------------
+Adam (lr=1e-4)                          0.7102   44  0.7714   0.7433   0.7425  0.755  0.738      3.45
+SGD (lr=0.01, momentum=0)               0.6331   50  0.7798   0.7784   0.7806  0.786  0.779      3.46
+SGD + Momentum 0.9 (lr=0.01)            0.7729   48  0.7475   0.7349   0.7364  0.749  0.728      3.54

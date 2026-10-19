@@ -1,15 +1,39 @@
 [
   {
-    "layer": "separable_conv2d",
-    "type": "SeparableConv2D",
+    "layer": "conv2d",
+    "type": "Conv2D",
     "output_shape": [
       64,
       64,
-      32
+      16
     ],
-    "total_params": 155,
-    "trainable_params": 155,
-    "macs": 503808
+    "total_params": 432,
+    "trainable_params": 432,
+    "macs": 1769472
+  },
+  {
+    "layer": "batch_normalization",
+    "type": "BatchNormalization",
+    "output_shape": [
+      64,
+      64,
+      16
+    ],
+    "total_params": 64,
+    "trainable_params": 32,
+    "macs": 0
+  },
+  {
+    "layer": "re_lu",
+    "type": "ReLU",
+    "output_shape": [
+      64,
+      64,
+      16
+    ],
+    "total_params": 0,
+    "trainable_params": 0,
+    "macs": 0
   },
   {
     "layer": "max_pooling2d",
@@ -17,43 +41,43 @@
     "output_shape": [
       32,
       32,
-      32
+      16
     ],
     "total_params": 0,
     "trainable_params": 0,
     "macs": 0
   },
   {
-    "layer": "separable_conv2d_1",
+    "layer": "separable_conv2d",
     "type": "SeparableConv2D",
     "output_shape": [
       32,
       32,
-      64
+      32
     ],
-    "total_params": 2336,
-    "trainable_params": 2336,
-    "macs": 2392064
+    "total_params": 656,
+    "trainable_params": 656,
+    "macs": 671744
   },
   {
-    "layer": "batch_normalization",
+    "layer": "batch_normalization_1",
     "type": "BatchNormalization",
     "output_shape": [
       32,
       32,
-      64
+      32
     ],
-    "total_params": 256,
-    "trainable_params": 128,
+    "total_params": 128,
+    "trainable_params": 64,
     "macs": 0
   },
   {
-    "layer": "activation",
-    "type": "Activation",
+    "layer": "re_lu_1",
+    "type": "ReLU",
     "output_shape": [
       32,
       32,
-      64
+      32
     ],
     "total_params": 0,
     "trainable_params": 0,
@@ -65,15 +89,39 @@
     "output_shape": [
       16,
       16,
-      64
+      32
     ],
     "total_params": 0,
     "trainable_params": 0,
     "macs": 0
   },
   {
-    "layer": "dropout",
-    "type": "Dropout",
+    "layer": "separable_conv2d_1",
+    "type": "SeparableConv2D",
+    "output_shape": [
+      16,
+      16,
+      64
+    ],
+    "total_params": 2336,
+    "trainable_params": 2336,
+    "macs": 598016
+  },
+  {
+    "layer": "batch_normalization_2",
+    "type": "BatchNormalization",
+    "output_shape": [
+      16,
+      16,
+      64
+    ],
+    "total_params": 256,
+    "trainable_params": 128,
+    "macs": 0
+  },
+  {
+    "layer": "re_lu_2",
+    "type": "ReLU",
     "output_shape": [
       16,
       16,
@@ -89,31 +137,31 @@
     "output_shape": [
       16,
       16,
-      128
+      64
     ],
-    "total_params": 8768,
-    "trainable_params": 8768,
-    "macs": 2244608
+    "total_params": 4672,
+    "trainable_params": 4672,
+    "macs": 1196032
   },
   {
-    "layer": "batch_normalization_1",
+    "layer": "batch_normalization_3",
     "type": "BatchNormalization",
     "output_shape": [
       16,
       16,
-      128
+      64
     ],
-    "total_params": 512,
-    "trainable_params": 256,
+    "total_params": 256,
+    "trainable_params": 128,
     "macs": 0
   },
   {
-    "layer": "activation_1",
-    "type": "Activation",
+    "layer": "re_lu_3",
+    "type": "ReLU",
     "output_shape": [
       16,
       16,
-      128
+      64
     ],
     "total_params": 0,
     "trainable_params": 0,
@@ -125,7 +173,151 @@
     "output_shape": [
       8,
       8,
+      64
+    ],
+    "total_params": 0,
+    "trainable_params": 0,
+    "macs": 0
+  },
+  {
+    "layer": "dropout",
+    "type": "Dropout",
+    "output_shape": [
+      8,
+      8,
+      64
+    ],
+    "total_params": 0,
+    "trainable_params": 0,
+    "macs": 0
+  },
+  {
+    "layer": "separable_conv2d_3",
+    "type": "SeparableConv2D",
+    "output_shape": [
+      8,
+      8,
       128
+    ],
+    "total_params": 8768,
+    "trainable_params": 8768,
+    "macs": 561152
+  },
+  {
+    "layer": "batch_normalization_4",
+    "type": "BatchNormalization",
+    "output_shape": [
+      8,
+      8,
+      128
+    ],
+    "total_params": 512,
+    "trainable_params": 256,
+    "macs": 0
+  },
+  {
+    "layer": "re_lu_4",
+    "type": "ReLU",
+    "output_shape": [
+      8,
+      8,
+      128
+    ],
+    "total_params": 0,
+    "trainable_params": 0,
+    "macs": 0
+  },
+  {
+    "layer": "separable_conv2d_4",
+    "type": "SeparableConv2D",
+    "output_shape": [
+      8,
+      8,
+      128
+    ],
+    "total_params": 17536,
+    "trainable_params": 17536,
+    "macs": 1122304
+  },
+  {
+    "layer": "batch_normalization_5",
+    "type": "BatchNormalization",
+    "output_shape": [
+      8,
+      8,
+      128
+    ],
+    "total_params": 512,
+    "trainable_params": 256,
+    "macs": 0
+  },
+  {
+    "layer": "re_lu_5",
+    "type": "ReLU",
+    "output_shape": [
+      8,
+      8,
+      128
+    ],
+    "total_params": 0,
+    "trainable_params": 0,
+    "macs": 0
+  },
+  {
+    "layer": "max_pooling2d_3",
+    "type": "MaxPooling2D",
+    "output_shape": [
+      4,
+      4,
+      128
+    ],
+    "total_params": 0,
+    "trainable_params": 0,
+    "macs": 0
+  },
+  {
+    "layer": "dropout_1",
+    "type": "Dropout",
+    "output_shape": [
+      4,
+      4,
+      128
+    ],
+    "total_params": 0,
+    "trainable_params": 0,
+    "macs": 0
+  },
+  {
+    "layer": "separable_conv2d_5",
+    "type": "SeparableConv2D",
+    "output_shape": [
+      4,
+      4,
+      256
+    ],
+    "total_params": 33920,
+    "trainable_params": 33920,
+    "macs": 542720
+  },
+  {
+    "layer": "batch_normalization_6",
+    "type": "BatchNormalization",
+    "output_shape": [
+      4,
+      4,
+      256
+    ],
+    "total_params": 1024,
+    "trainable_params": 512,
+    "macs": 0
+  },
+  {
+    "layer": "re_lu_6",
+    "type": "ReLU",
+    "output_shape": [
+      4,
+      4,
+      256
     ],
     "total_params": 0,
     "trainable_params": 0,
@@ -135,7 +327,7 @@
     "layer": "global_average_pooling2d",
     "type": "GlobalAveragePooling2D",
     "output_shape": [
-      128
+      256
     ],
     "total_params": 0,
     "trainable_params": 0,
@@ -145,17 +337,17 @@
     "layer": "dense",
     "type": "Dense",
     "output_shape": [
-      128
+      64
     ],
-    "total_params": 16512,
-    "trainable_params": 16512,
+    "total_params": 16448,
+    "trainable_params": 16448,
     "macs": 16384
   },
   {
-    "layer": "dropout_1",
+    "layer": "dropout_2",
     "type": "Dropout",
     "output_shape": [
-      128
+      64
     ],
     "total_params": 0,
     "trainable_params": 0,
@@ -167,8 +359,8 @@
     "output_shape": [
       9
     ],
-    "total_params": 1161,
-    "trainable_params": 1161,
-    "macs": 1152
+    "total_params": 585,
+    "trainable_params": 585,
+    "macs": 576
   }
 ]
