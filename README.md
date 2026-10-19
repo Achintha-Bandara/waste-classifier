@@ -104,12 +104,12 @@ custom-model entries show the strongest recorded optimizer configuration for
 each architecture. Exact values can vary with the random seed, hardware,
 TensorFlow version, and training settings.
 
-| Model | Configuration | Accuracy | Macro precision | Macro recall | Macro F1 | Median time/epoch |
+| Model | Configuration | Accuracy | Macro precision | Macro recall | Macro F1 |
 |---|---|---:|---:|---:|---:|---:|
-| Model A | SGD, learning rate `0.01` | ~76.3% | ~0.77 | ~0.76 | ~0.76 | ~3.47 s |
-| Model B | Adam, learning rate `1e-3` | ~76.0% | ~0.77 | ~0.77 | ~0.77 | ~1.12 s |
-| MobileNetV2 | ImageNet pretrained | ~79.0% | ~0.80 | ~0.80 | ~0.79 | ~3.58 s |
-| EfficientNet-B0 | ImageNet pretrained | ~79.0% | ~0.80 | ~0.79 | ~0.79 | ~4.37 s |
+| Model A | SGD, learning rate `0.01` | ~76.3% | ~0.77 | ~0.76 | ~0.76 |
+| Model B | Adam, learning rate `1e-3` | ~76.0% | ~0.77 | ~0.77 | ~0.77 |
+| MobileNetV2 | ImageNet pretrained | ~79.0% | ~0.80 | ~0.80 | ~0.79 |
+| EfficientNet-B0 | ImageNet pretrained | ~79.0% | ~0.80 | ~0.79 | ~0.79 |
 
 Model B achieves nearly the same overall accuracy as Model A while using only
 about 88,000 parameters and approximately 6.48 million MACs. Its median epoch
@@ -118,14 +118,7 @@ strongest approximate macro-F1 scores in the saved comparison, but they require
 much larger model footprints: approximately 24.1 MB and 40.9 MB, respectively,
 compared with approximately 0.78 MB for Model B.
 
-Depending on the model, a result directory contains the saved Keras model, metrics, training history, per-class classification report, run metadata, command line, architecture summary, training curves, class-distribution plot, and confusion-matrix files.
-
-The most useful files are:
-
-- `metrics.json` - aggregate test metrics, parameter counts, model size, and timing
-- `training_history.json` - training and validation histories, including epoch timings
-- `classification_report.txt` - per-class precision, recall, and F1 score
-- `confusion_matrix.csv` and `confusion_matrix.png` - test-set confusion matrix
+Depending on the model, result directory contains the saved Keras model, metrics, training history, per-class classification report, run metadata, command line, architecture summary, training curves, class-distribution plot, and confusion-matrix files.
 
 ## Comparing saved runs
 
@@ -150,12 +143,6 @@ python compareB.py
 ```
 
 This writes `comparison_modelB_sota.md`, `comparison_modelB_sota.csv`, and `comparison_modelB_sota.json` under `results/`.
-
-## Report and notebooks
-
-- [report.ipynb](report.ipynb) contains the experiment workflow and visualizations.
-- [report.md](report.md) is the rendered report and records the dataset6 experiments and results.
-- [EN3150_Assignment_03_In23.md](EN3150_Assignment_03_In23.md) contains the assignment requirements.
 
 ## Reproducibility
 
