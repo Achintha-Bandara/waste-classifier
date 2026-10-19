@@ -1,3 +1,21 @@
+"""
+Model B - Lightweight CNN (Depthwise Separable Convolutions)
+
+Assignment items covered by this script
+  1. Data preparation : 64x64 images, stratified 70/15/15 split
+  2. Architecture     : per-layer parameter table + trainable-parameter count + MACs
+  3. Optimizers       : Adam vs SGD vs SGD+Momentum (plus a momentum sweep)
+  4. Training/eval    : >= 20 epochs, loss curves, accuracy, confusion matrix,
+                        precision, recall, model size, time per epoch
+
+Hardware-aware activation choice
+  * ReLU = max(0, x): one comparison, no exponential, no division, trivially
+    quantisable to int8. Sigmoid / tanh / swish / GELU / ELU all need exp().
+  * The output layer emits raw logits (no softmax). The softmax exponential is
+    only needed for training; at inference argmax(logits) == argmax(softmax),
+    so the exp() is never computed on the device.
+"""
+import os
 import json
 import time
 from pathlib import Path
@@ -16,36 +34,56 @@ from sklearn.metrics import (
     confusion_matrix,
     ConfusionMatrixDisplay,
     f1_score,
+    precision_score,
+    recall_score,
 )
 
+# ----------------------------------------------------------------------------
+# Configuration
+# ----------------------------------------------------------------------------
+MODEL_TAG = "modelB"
+MODEL_LABEL = "Model B (Lightweight CNN)"
+PARAM_LIMIT = 100_000  # assignment: <= 100,000 trainable parameters
+
 PROJECT_DIR = Path(__file__).resolve().parent
-DATASET_DIR = PROJECT_DIR / "dataset6"
-RESULTS_DIR = PROJECT_DIR / "results" / "modelB"
+DATASET_DIR = Path(os.environ.get("DATASET_DIR", PROJECT_DIR / "dataset6"))
+RESULTS_DIR = PROJECT_DIR / "results" / MODEL_TAG
 
 IMG_SIZE = (64, 64)
 BATCH_SIZE = 32
 SEED = 42
-EPOCHS = 40
+EPOCHS = int(os.environ.get("EPOCHS", 30))  # assignment requires >= 20
+USE_CACHE = True  # cache decoded 64x64 images in RAM (set False if RAM is tight)
+
+# Optimizers to compare. The first entry is the "chosen" optimizer; the full
+# model artifacts (model file, confusion matrix, ...) are saved for it.
+OPTIMIZERS = [
+    {"key": "adam", "label": "Adam (lr=1e-4)",
+     "make": lambda: keras.optimizers.Adam(learning_rate=1e-4)},
+    {"key": "sgd", "label": "SGD (lr=0.01, momentum=0)",
+     "make": lambda: keras.optimizers.SGD(learning_rate=1e-2, momentum=0.0)},
+    {"key": "sgd_m0.5", "label": "SGD + Momentum 0.5 (lr=0.01)",
+     "make": lambda: keras.optimizers.SGD(learning_rate=1e-2, momentum=0.5)},
+    {"key": "sgd_m0.9", "label": "SGD + Momentum 0.9 (lr=0.01)",
+     "make": lambda: keras.optimizers.SGD(learning_rate=1e-2, momentum=0.9)},
+    {"key": "sgd_m0.99", "label": "SGD + Momentum 0.99 (lr=0.01)",
+     "make": lambda: keras.optimizers.SGD(learning_rate=1e-2, momentum=0.99)},
+]
+MAIN_OPTIMIZER_KEY = OPTIMIZERS[0]["key"]
 
 RESULTS_DIR.mkdir(parents=True, exist_ok=True)
-keras.utils.set_random_seed(SEED)
 
-class_names = sorted(
-    p.name for p in DATASET_DIR.iterdir() if p.is_dir()
-)
-class_to_idx = {
-    name: index for index, name in enumerate(class_names)
-}
+# ----------------------------------------------------------------------------
+# Data preparation
+# ----------------------------------------------------------------------------
+class_names = sorted(p.name for p in DATASET_DIR.iterdir() if p.is_dir())
+class_to_idx = {name: i for i, name in enumerate(class_names)}
 num_classes = len(class_names)
 
 extensions = {".jpg", ".jpeg", ".png", ".bmp", ".webp"}
-
 paths, labels = [], []
-
 for class_name in class_names:
-    class_dir = DATASET_DIR / class_name
-
-    for path in sorted(class_dir.rglob("*")):
+    for path in sorted((DATASET_DIR / class_name).rglob("*")):
         if path.is_file() and path.suffix.lower() in extensions:
             paths.append(str(path))
             labels.append(class_to_idx[class_name])
@@ -54,143 +92,132 @@ if not paths:
     raise ValueError(f"No images found in {DATASET_DIR}")
 
 class_counts = Counter(labels)
-
 print("\nImages per class:")
-for name, index in class_to_idx.items():
-    print(f"{name:30s}: {class_counts[index]}")
-
+for name, idx in class_to_idx.items():
+    print(f"{name:30s}: {class_counts[idx]}")
 print(f"\nTotal images: {len(paths)}")
 print(f"Number of classes: {num_classes}")
 
 # Stratified 70% / 15% / 15% split
 X_train, X_temp, y_train, y_temp = train_test_split(
-    paths,
-    labels,
-    test_size=0.30,
-    stratify=labels,
-    random_state=SEED,
-)
-
+    paths, labels, test_size=0.30, stratify=labels, random_state=SEED)
 X_val, X_test, y_val, y_test = train_test_split(
-    X_temp,
-    y_temp,
-    test_size=0.50,
-    stratify=y_temp,
-    random_state=SEED,
-)
+    X_temp, y_temp, test_size=0.50, stratify=y_temp, random_state=SEED)
 
 print(f"\nTraining:   {len(X_train)} ({len(X_train)/len(paths):.1%})")
 print(f"Validation: {len(X_val)} ({len(X_val)/len(paths):.1%})")
 print(f"Testing:    {len(X_test)} ({len(X_test)/len(paths):.1%})")
-print("Classes:", class_to_idx)
 
 
 def load_image(path, label):
     image = tf.io.read_file(path)
-    image = tf.io.decode_image(
-        image,
-        channels=3,
-        expand_animations=False,
-    )
+    image = tf.io.decode_image(image, channels=3, expand_animations=False)
     image.set_shape([None, None, 3])
-    image = tf.image.resize(image, IMG_SIZE)
+    image = tf.image.resize(image, IMG_SIZE)  # downscale to 64x64
     image = tf.cast(image, tf.float32) / 255.0
-
     return image, label
 
 
-def make_dataset(paths, labels, training=False):
-    ds = tf.data.Dataset.from_tensor_slices((paths, labels))
-
+def make_dataset(paths_, labels_, training=False):
+    ds = tf.data.Dataset.from_tensor_slices((paths_, labels_))
+    ds = ds.map(load_image, num_parallel_calls=tf.data.AUTOTUNE)
+    if USE_CACHE:
+        ds = ds.cache()
     if training:
-        ds = ds.shuffle(
-            buffer_size=len(paths),
-            seed=SEED,
-            reshuffle_each_iteration=True,
-        )
-
-    ds = ds.map(
-        load_image,
-        num_parallel_calls=tf.data.AUTOTUNE,
-    )
-    ds = ds.batch(BATCH_SIZE)
-    ds = ds.prefetch(tf.data.AUTOTUNE)
-
-    return ds
+        ds = ds.shuffle(len(paths_), seed=SEED, reshuffle_each_iteration=True)
+    return ds.batch(BATCH_SIZE).prefetch(tf.data.AUTOTUNE)
 
 
 train_ds = make_dataset(X_train, y_train, training=True)
 val_ds = make_dataset(X_val, y_val)
 test_ds = make_dataset(X_test, y_test)
 
-# Model B: lightweight CNN
-model = keras.Sequential([
-    layers.Input(shape=(64, 64, 3)),
 
-    # Convolution block 1
-    layers.SeparableConv2D(
-        32,
-        kernel_size=(3, 3),
-        padding="same",
-        activation="relu",
-    ),
-    layers.MaxPooling2D(pool_size=(2, 2)),
+# ----------------------------------------------------------------------------
+# ===== MODEL DEFINITION (START) =====
+# ----------------------------------------------------------------------------
+def build_model():
+    """Model B: lightweight CNN built from depthwise separable convolutions
+    (depthwise 3x3 + pointwise 1x1) and Global Average Pooling. Output = logits."""
+    return keras.Sequential([
+        layers.Input(shape=(64, 64, 3)),
 
-    # Convolution block 2
-    layers.SeparableConv2D(
-        64,
-        kernel_size=(3, 3),
-        padding="same",
-        use_bias=False,
-    ),
-    layers.BatchNormalization(),
-    layers.Activation("relu"),
-    layers.MaxPooling2D(pool_size=(2, 2)),
-    layers.Dropout(0.10),
+        # Block 1: separable 3x3 conv, 32 filters
+        layers.SeparableConv2D(32, kernel_size=(3, 3), padding="same",
+                               activation="relu"),
+        layers.MaxPooling2D(pool_size=(2, 2)),
 
-    # Convolution block 3
-    layers.SeparableConv2D(
-        128,
-        kernel_size=(3, 3),
-        padding="same",
-        use_bias=False,
-    ),
-    layers.BatchNormalization(),
-    layers.Activation("relu"),
-    layers.MaxPooling2D(pool_size=(2, 2)),
+        # Block 2: separable 3x3 conv, 64 filters + BN
+        layers.SeparableConv2D(64, kernel_size=(3, 3), padding="same",
+                               use_bias=False),
+        layers.BatchNormalization(),
+        layers.Activation("relu"),
+        layers.MaxPooling2D(pool_size=(2, 2)),
+        layers.Dropout(0.10),
 
-    # Lightweight classification head
-    layers.GlobalAveragePooling2D(),
-    layers.Dense(128, activation="relu"),
-    layers.Dropout(0.25),
-    layers.Dense(num_classes, activation="softmax"),
-], name="ModelB_Lightweight_CNN")
+        # Block 3: separable 3x3 conv, 128 filters + BN
+        layers.SeparableConv2D(128, kernel_size=(3, 3), padding="same",
+                               use_bias=False),
+        layers.BatchNormalization(),
+        layers.Activation("relu"),
+        layers.MaxPooling2D(pool_size=(2, 2)),
 
-trainable_params = sum(
-    int(np.prod(weight.shape))
-    for weight in model.trainable_weights
-)
-total_params = model.count_params()
-non_trainable_params = total_params - trainable_params
+        # Lightweight head: GAP -> FC(128) -> FC(num_classes)
+        layers.GlobalAveragePooling2D(),
+        layers.Dense(128, activation="relu"),
+        layers.Dropout(0.25),
+        layers.Dense(num_classes),  # logits; softmax folded into the loss
+    ], name="ModelB_Lightweight_CNN")
+# ----------------------------------------------------------------------------
+# ----------------------------------------------------------------------------
+# ===== MODEL DEFINITION (END) =====
+# ----------------------------------------------------------------------------
 
-print("\nModel B parameters:")
-print(f"Trainable parameters:     {trainable_params:,}")
-print(f"Non-trainable parameters: {non_trainable_params:,}")
-print(f"Total parameters:         {total_params:,}")
 
-assert trainable_params <= 100_000, (
-    f"Model B exceeds the 100,000 trainable-parameter limit: "
-    f"{trainable_params:,}"
-)
+def layer_breakdown(model):
+    """Per-layer output shape, parameters (total / trainable) and MACs."""
+    rows = []
+    for layer in model.layers:
+        out_shape = tuple(layer.output.shape[1:])
+        in_shape = tuple(layer.input.shape[1:])
+        trainable = sum(int(np.prod(w.shape)) for w in layer.trainable_weights)
+        total = layer.count_params()
+        macs = 0
+        if isinstance(layer, layers.SeparableConv2D):
+            k = layer.kernel_size[0] * layer.kernel_size[1]
+            cin, cout = in_shape[-1], layer.filters
+            macs = out_shape[0] * out_shape[1] * (k * cin + cin * cout)
+        elif isinstance(layer, layers.Conv2D):
+            k = layer.kernel_size[0] * layer.kernel_size[1]
+            cin, cout = in_shape[-1], layer.filters
+            macs = out_shape[0] * out_shape[1] * k * cin * cout
+        elif isinstance(layer, layers.Dense):
+            macs = in_shape[-1] * out_shape[-1]
+        rows.append({
+            "layer": layer.name,
+            "type": layer.__class__.__name__,
+            "output_shape": list(out_shape),
+            "total_params": int(total),
+            "trainable_params": int(trainable),
+            "macs": int(macs),
+        })
+    return rows
 
-print("Parameter constraint satisfied.\n")
-model.summary()
 
-model.compile(
-    optimizer=keras.optimizers.Adam(learning_rate=1e-4),
-    loss="sparse_categorical_crossentropy",
-    metrics=["accuracy"],
-)
+def format_breakdown(rows):
+    header = f"{'Layer':28s}{'Type':22s}{'Output shape':18s}{'Params':>10s}{'Trainable':>12s}{'MACs':>14s}"
+    lines = [header, "-" * len(header)]
+    for r in rows:
+        lines.append(
+            f"{r['layer']:28s}{r['type']:22s}{str(tuple(r['output_shape'])):18s}"
+            f"{r['total_params']:>10,}{r['trainable_params']:>12,}{r['macs']:>14,}")
+    lines.append("-" * len(header))
+    lines.append(
+        f"{'TOTAL':28s}{'':22s}{'':18s}"
+        f"{sum(r['total_params'] for r in rows):>10,}"
+        f"{sum(r['trainable_params'] for r in rows):>12,}"
+        f"{sum(r['macs'] for r in rows):>14,}")
+    return "\n".join(lines)
 
 
 class EpochTimer(keras.callbacks.Callback):
@@ -198,186 +225,230 @@ class EpochTimer(keras.callbacks.Callback):
         self.epoch_times = []
 
     def on_epoch_begin(self, epoch, logs=None):
-        self.epoch_start = time.perf_counter()
+        self.t0 = time.perf_counter()
 
     def on_epoch_end(self, epoch, logs=None):
-        elapsed = time.perf_counter() - self.epoch_start
-        self.epoch_times.append(float(elapsed))
-        print(f"Epoch time: {elapsed:.2f} seconds")
+        self.epoch_times.append(float(time.perf_counter() - self.t0))
 
 
-epoch_timer = EpochTimer()
+def run_experiment(opt_cfg):
+    """Train a fresh Model B with one optimizer for EPOCHS epochs (no early
+    stopping, so every run completes >= 20 epochs), restore the best
+    validation-loss weights, then evaluate on the test set."""
+    print(f"\n{'=' * 70}\nTraining {MODEL_LABEL} with {opt_cfg['label']}\n{'=' * 70}")
+    keras.utils.set_random_seed(SEED)  # identical initial weights per optimizer
+    model = build_model()
+    model.compile(
+        optimizer=opt_cfg["make"](),
+        loss=keras.losses.SparseCategoricalCrossentropy(from_logits=True),
+        metrics=["accuracy"],
+    )
 
-callbacks = [
-    keras.callbacks.ModelCheckpoint(
-        filepath=str(RESULTS_DIR / "best_model.keras"),
-        monitor="val_loss",
-        save_best_only=True,
-        mode="min",
-        verbose=1,
-    ),
-    keras.callbacks.EarlyStopping(
-        monitor="val_loss",
-        patience=5,
-        restore_best_weights=True,
-        mode="min",
-        verbose=1,
-    ),
-    keras.callbacks.ReduceLROnPlateau(
-        monitor="val_loss",
-        factor=0.5,
-        patience=2,
-        min_lr=1e-6,
-        mode="min",
-        verbose=1,
-    ),
-    epoch_timer,
-]
+    weights_path = RESULTS_DIR / f"best_{opt_cfg['key']}.weights.h5"
+    timer = EpochTimer()
+    callbacks = [
+        keras.callbacks.ModelCheckpoint(
+            filepath=str(weights_path), monitor="val_loss", mode="min",
+            save_best_only=True, save_weights_only=True, verbose=0),
+        keras.callbacks.ReduceLROnPlateau(
+            monitor="val_loss", factor=0.5, patience=2, min_lr=1e-6,
+            mode="min", verbose=1),
+        timer,
+    ]
 
-print("\nTraining Model B...")
+    t0 = time.perf_counter()
+    history = model.fit(train_ds, epochs=EPOCHS, validation_data=val_ds,
+                        callbacks=callbacks, verbose=2)
+    total_time = time.perf_counter() - t0
 
-training_start = time.perf_counter()
+    if weights_path.exists():
+        model.load_weights(weights_path)  # best validation-loss weights
 
-history = model.fit(
-    train_ds,
-    epochs=EPOCHS,
-    validation_data=val_ds,
-    callbacks=callbacks,
-    verbose=2,
-)
+    test_loss, test_acc = model.evaluate(test_ds, verbose=0)
+    logits = model.predict(test_ds, verbose=0)
+    preds = logits.argmax(axis=1)
 
-total_training_time = time.perf_counter() - training_start
+    hist = {k: [float(v) for v in vals] for k, vals in history.history.items()}
+    val_loss = history.history["val_loss"]
+    val_acc = history.history["val_accuracy"]
+    result = {
+        "key": opt_cfg["key"],
+        "label": opt_cfg["label"],
+        "epochs_completed": len(val_loss),
+        "test_loss": float(test_loss),
+        "test_accuracy": float(test_acc),
+        "test_f1_macro": float(f1_score(y_test, preds, average="macro", zero_division=0)),
+        "test_f1_weighted": float(f1_score(y_test, preds, average="weighted", zero_division=0)),
+        "test_precision_macro": float(precision_score(y_test, preds, average="macro", zero_division=0)),
+        "test_recall_macro": float(recall_score(y_test, preds, average="macro", zero_division=0)),
+        "best_validation_loss": float(min(val_loss)),
+        "best_validation_loss_epoch": int(np.argmin(val_loss)) + 1,
+        "best_validation_accuracy": float(max(val_acc)),
+        "best_validation_accuracy_epoch": int(np.argmax(val_acc)) + 1,
+        "final_training_loss": float(history.history["loss"][-1]),
+        "final_training_accuracy": float(history.history["accuracy"][-1]),
+        "final_validation_loss": float(val_loss[-1]),
+        "final_validation_accuracy": float(val_acc[-1]),
+        "total_training_time_seconds": float(total_time),
+        "average_epoch_time_seconds": float(np.mean(timer.epoch_times)),
+        "median_epoch_time_seconds": float(np.median(timer.epoch_times)),
+        "epoch_time_seconds": timer.epoch_times,
+        "history": hist,
+    }
+    print(f"{opt_cfg['label']}: test acc {test_acc:.4f} | macro F1 "
+          f"{result['test_f1_macro']:.4f} | best val loss "
+          f"{result['best_validation_loss']:.4f} @ epoch "
+          f"{result['best_validation_loss_epoch']} | "
+          f"{result['average_epoch_time_seconds']:.2f}s/epoch")
+    return model, preds, result, weights_path
 
-# Evaluate the restored best-validation-loss weights
-test_loss, test_accuracy = model.evaluate(test_ds, verbose=2)
 
-test_probabilities = model.predict(test_ds, verbose=0)
-test_predictions = test_probabilities.argmax(axis=1)
+# ----------------------------------------------------------------------------
+# Architecture report (parameters, MACs, size)
+# ----------------------------------------------------------------------------
+keras.utils.set_random_seed(SEED)
+arch_model = build_model()
+arch_model.summary()
+rows = layer_breakdown(arch_model)
+breakdown_text = format_breakdown(rows)
+print("\n" + breakdown_text)
 
-test_f1_macro = f1_score(
-    y_test,
-    test_predictions,
-    average="macro",
-    zero_division=0,
-)
-test_f1_weighted = f1_score(
-    y_test,
-    test_predictions,
-    average="weighted",
-    zero_division=0,
-)
+trainable_params = sum(r["trainable_params"] for r in rows)
+total_params = sum(r["total_params"] for r in rows)
+non_trainable_params = total_params - trainable_params
+total_macs = sum(r["macs"] for r in rows)
+float32_size_kb = total_params * 4 / 1024
 
-test_classification_report = classification_report(
-    y_test,
-    test_predictions,
-    labels=list(range(num_classes)),
-    target_names=class_names,
-    output_dict=True,
-    zero_division=0,
-)
+print(f"\nTrainable parameters:     {trainable_params:,}")
+print(f"Non-trainable parameters: {non_trainable_params:,}")
+print(f"Total parameters:         {total_params:,}")
+print(f"MACs per inference:       {total_macs:,}")
+print(f"Float32 weight size:      {float32_size_kb:.1f} KB")
+
+if PARAM_LIMIT is not None:
+    assert trainable_params <= PARAM_LIMIT, (
+        f"{MODEL_LABEL} exceeds the {PARAM_LIMIT:,} trainable-parameter "
+        f"limit: {trainable_params:,}")
+    print(f"Parameter constraint satisfied (<= {PARAM_LIMIT:,}).")
+
+(RESULTS_DIR / "layer_breakdown.txt").write_text(breakdown_text, encoding="utf-8")
+(RESULTS_DIR / "layer_breakdown.json").write_text(json.dumps(rows, indent=2), encoding="utf-8")
+del arch_model
+
+# ----------------------------------------------------------------------------
+# Run all optimizer experiments
+# ----------------------------------------------------------------------------
+results = {}
+for cfg in OPTIMIZERS:
+    model, preds, res, weights_path = run_experiment(cfg)
+    results[cfg["key"]] = res
+
+    if cfg["key"] == MAIN_OPTIMIZER_KEY:
+        main_model, main_preds, main_res = model, preds, res
+    else:
+        weights_path.unlink(missing_ok=True)  # keep only the main run's weights
+        del model
+
+main_weights = RESULTS_DIR / f"best_{MAIN_OPTIMIZER_KEY}.weights.h5"
+main_weights.unlink(missing_ok=True)
+
+# ----------------------------------------------------------------------------
+# Save artifacts for the chosen (main) optimizer
+# ----------------------------------------------------------------------------
+model_path = RESULTS_DIR / "model.keras"
+main_model.save(model_path)
+disk_size_kb = model_path.stat().st_size / 1024
+print(f"\nSaved model file size: {disk_size_kb:.1f} KB")
+
+report_dict = classification_report(
+    y_test, main_preds, labels=list(range(num_classes)),
+    target_names=class_names, output_dict=True, zero_division=0)
 report_text = classification_report(
-    y_test,
-    test_predictions,
-    labels=list(range(num_classes)),
-    target_names=class_names,
-    zero_division=0,
-)
+    y_test, main_preds, labels=list(range(num_classes)),
+    target_names=class_names, zero_division=0)
+print("\n" + report_text)
 
-average_epoch_time = float(np.mean(epoch_timer.epoch_times))
-history_data = {
-    metric: [float(value) for value in values]
-    for metric, values in history.history.items()
-}
-history_data["epoch_time_seconds"] = epoch_timer.epoch_times
-
-final_epoch = len(history.history["loss"])
-best_val_loss_epoch = int(np.argmin(history.history["val_loss"])) + 1
-best_val_accuracy_epoch = int(np.argmax(history.history["val_accuracy"])) + 1
-
-print("\nModel B test results:")
-print(f"Test loss:            {test_loss:.4f}")
-print(f"Test accuracy:        {test_accuracy:.4f}")
-print(f"Test Macro F1:        {test_f1_macro:.4f}")
-print(f"Test Weighted F1:     {test_f1_weighted:.4f}")
-print(f"Trainable parameters: {trainable_params:,}")
-print(f"Total parameters:     {total_params:,}")
-print(f"Total training time:  {total_training_time:.2f} seconds")
-print(f"Average epoch time:   {average_epoch_time:.2f} seconds")
-
-# Save the restored best model and training history
-model.save(RESULTS_DIR / "model.keras")
-
-(RESULTS_DIR / "training_history.json").write_text(
-    json.dumps(history_data, indent=2),
-    encoding="utf-8",
-)
+cm = confusion_matrix(y_test, main_preds, labels=list(range(num_classes)))
 
 final_metrics = {
-    "test_loss": float(test_loss),
-    "test_accuracy": float(test_accuracy),
-    "test_f1_macro": float(test_f1_macro),
-    "test_f1_weighted": float(test_f1_weighted),
-    "test_classification_report": test_classification_report,
+    "model": MODEL_LABEL,
+    "optimizer": main_res["label"],
+    "test_loss": main_res["test_loss"],
+    "test_accuracy": main_res["test_accuracy"],
+    "test_precision_macro": main_res["test_precision_macro"],
+    "test_recall_macro": main_res["test_recall_macro"],
+    "test_f1_macro": main_res["test_f1_macro"],
+    "test_f1_weighted": main_res["test_f1_weighted"],
+    "test_classification_report": report_dict,
+    "confusion_matrix": cm.tolist(),
     "trainable_parameters": int(trainable_params),
     "non_trainable_parameters": int(non_trainable_params),
     "total_parameters": int(total_params),
-    "final_epoch": int(final_epoch),
-    "best_validation_loss": float(min(history.history["val_loss"])),
-    "best_validation_loss_epoch": best_val_loss_epoch,
-    "best_validation_accuracy": float(
-        max(history.history["val_accuracy"])
-    ),
-    "best_validation_accuracy_epoch": best_val_accuracy_epoch,
-    "final_training_loss": float(history.history["loss"][-1]),
-    "final_training_accuracy": float(history.history["accuracy"][-1]),
-    "final_validation_loss": float(history.history["val_loss"][-1]),
-    "final_validation_accuracy": float(
-        history.history["val_accuracy"][-1]
-    ),
-    "total_training_time_seconds": float(total_training_time),
-    "average_epoch_time_seconds": average_epoch_time,
+    "macs_per_inference": int(total_macs),
+    "float32_weight_size_kb": float(float32_size_kb),
+    "model_file_size_kb": float(disk_size_kb),
+    "epochs_completed": main_res["epochs_completed"],
+    "best_validation_loss": main_res["best_validation_loss"],
+    "best_validation_loss_epoch": main_res["best_validation_loss_epoch"],
+    "best_validation_accuracy": main_res["best_validation_accuracy"],
+    "best_validation_accuracy_epoch": main_res["best_validation_accuracy_epoch"],
+    "final_training_loss": main_res["final_training_loss"],
+    "final_training_accuracy": main_res["final_training_accuracy"],
+    "final_validation_loss": main_res["final_validation_loss"],
+    "final_validation_accuracy": main_res["final_validation_accuracy"],
+    "total_training_time_seconds": main_res["total_training_time_seconds"],
+    "average_epoch_time_seconds": main_res["average_epoch_time_seconds"],
+    "median_epoch_time_seconds": main_res["median_epoch_time_seconds"],
 }
+(RESULTS_DIR / "metrics.json").write_text(json.dumps(final_metrics, indent=2), encoding="utf-8")
+(RESULTS_DIR / "training_history.json").write_text(
+    json.dumps({**main_res["history"], "epoch_time_seconds": main_res["epoch_time_seconds"]}, indent=2),
+    encoding="utf-8")
+(RESULTS_DIR / "classification_report.txt").write_text(report_text, encoding="utf-8")
 
-(RESULTS_DIR / "metrics.json").write_text(
-    json.dumps(final_metrics, indent=2),
-    encoding="utf-8",
-)
-
-run_metadata = {
+(RESULTS_DIR / "run_metadata.json").write_text(json.dumps({
     "created_at_utc": datetime.now(timezone.utc).isoformat(),
-    "model": "Model B - Lightweight CNN with SeparableConv2D",
+    "model": MODEL_LABEL,
     "dataset": str(DATASET_DIR),
     "image_size": list(IMG_SIZE),
     "batch_size": BATCH_SIZE,
     "epochs_requested": EPOCHS,
-    "epochs_completed": final_epoch,
     "seed": SEED,
-    "optimizer": "Adam",
-    "initial_learning_rate": 1e-4,
+    "main_optimizer": main_res["label"],
+    "loss": "SparseCategoricalCrossentropy(from_logits=True)",
+    "lr_schedule": "ReduceLROnPlateau(factor=0.5, patience=2, min_lr=1e-6)",
     "class_names": class_names,
     "class_to_idx": class_to_idx,
     "num_images": len(paths),
     "train_images": len(X_train),
     "validation_images": len(X_val),
     "test_images": len(X_test),
-    "trainable_parameters": int(trainable_params),
-    "non_trainable_parameters": int(non_trainable_params),
-    "total_parameters": int(total_params),
-    "total_training_time_seconds": float(total_training_time),
-    "epoch_time_seconds": epoch_timer.epoch_times,
-}
+}, indent=2), encoding="utf-8")
 
-(RESULTS_DIR / "run_metadata.json").write_text(
-    json.dumps(run_metadata, indent=2),
-    encoding="utf-8",
-)
+# Optimizer comparison table
+lines = [
+    f"{MODEL_LABEL}: optimizer comparison ({EPOCHS} epochs each, same seed/init)",
+    "",
+    f"{'Optimizer':34s}{'BestValLoss':>12s}{'@Ep':>5s}{'ValAcc':>8s}{'TestAcc':>9s}{'MacroF1':>9s}{'s/epoch':>9s}",
+    "-" * 86,
+]
+for r in results.values():
+    lines.append(
+        f"{r['label']:34s}{r['best_validation_loss']:>12.4f}"
+        f"{r['best_validation_loss_epoch']:>5d}{r['best_validation_accuracy']:>8.4f}"
+        f"{r['test_accuracy']:>9.4f}{r['test_f1_macro']:>9.4f}"
+        f"{r['average_epoch_time_seconds']:>9.2f}")
+comparison_text = "\n".join(lines)
+print("\n" + comparison_text)
+(RESULTS_DIR / "optimizer_comparison.txt").write_text(comparison_text, encoding="utf-8")
+(RESULTS_DIR / "optimizer_comparison.json").write_text(json.dumps(results, indent=2), encoding="utf-8")
 
-# Plot class distribution
+# ----------------------------------------------------------------------------
+# Plots
+# ----------------------------------------------------------------------------
+# Class distribution
 plt.figure(figsize=(12, 6))
-plt.bar(
-    class_names,
-    [class_counts[class_to_idx[name]] for name in class_names],
-)
+plt.bar(class_names, [class_counts[class_to_idx[n]] for n in class_names])
 plt.title("Images per Class")
 plt.xlabel("Class")
 plt.ylabel("Number of Images")
@@ -387,13 +458,14 @@ plt.tight_layout()
 plt.savefig(RESULTS_DIR / "class_distribution.png", dpi=150)
 plt.close()
 
-# Plot training and validation loss
-epochs = range(1, final_epoch + 1)
+# Training / validation loss and accuracy (chosen optimizer)
+epochs_axis = range(1, main_res["epochs_completed"] + 1)
+h = main_res["history"]
 
 plt.figure(figsize=(10, 6))
-plt.plot(epochs, history.history["loss"], label="Training Loss")
-plt.plot(epochs, history.history["val_loss"], label="Validation Loss")
-plt.title("Model B: Training and Validation Loss")
+plt.plot(epochs_axis, h["loss"], label="Training Loss")
+plt.plot(epochs_axis, h["val_loss"], label="Validation Loss")
+plt.title(f"{MODEL_LABEL}: Training and Validation Loss ({main_res['label']})")
 plt.xlabel("Epoch")
 plt.ylabel("Loss")
 plt.legend()
@@ -402,15 +474,10 @@ plt.tight_layout()
 plt.savefig(RESULTS_DIR / "loss_curve.png", dpi=150)
 plt.close()
 
-# Plot training and validation accuracy
 plt.figure(figsize=(10, 6))
-plt.plot(epochs, history.history["accuracy"], label="Training Accuracy")
-plt.plot(
-    epochs,
-    history.history["val_accuracy"],
-    label="Validation Accuracy",
-)
-plt.title("Model B: Training and Validation Accuracy")
+plt.plot(epochs_axis, h["accuracy"], label="Training Accuracy")
+plt.plot(epochs_axis, h["val_accuracy"], label="Validation Accuracy")
+plt.title(f"{MODEL_LABEL}: Training and Validation Accuracy ({main_res['label']})")
 plt.xlabel("Epoch")
 plt.ylabel("Accuracy")
 plt.legend()
@@ -419,37 +486,34 @@ plt.tight_layout()
 plt.savefig(RESULTS_DIR / "accuracy_curve.png", dpi=150)
 plt.close()
 
-# Plot confusion matrix
-cm = confusion_matrix(
-    y_test,
-    test_predictions,
-    labels=list(range(num_classes)),
-)
-
-fig, ax = plt.subplots(figsize=(10, 8))
-display = ConfusionMatrixDisplay(
-    confusion_matrix=cm,
-    display_labels=class_names,
-)
-display.plot(
-    ax=ax,
-    cmap="Blues",
-    xticks_rotation=45,
-    values_format="d",
-    colorbar=False,
-)
-ax.set_title("Model B: Test Confusion Matrix")
+# Optimizer comparison curves
+fig, axes = plt.subplots(1, 3, figsize=(18, 5))
+for r in results.values():
+    ep = range(1, r["epochs_completed"] + 1)
+    axes[0].plot(ep, r["history"]["loss"], label=r["label"])
+    axes[1].plot(ep, r["history"]["val_loss"], label=r["label"])
+    axes[2].plot(ep, r["history"]["val_accuracy"], label=r["label"])
+for ax, title, ylab in zip(
+        axes,
+        ["Training loss", "Validation loss", "Validation accuracy"],
+        ["Loss", "Loss", "Accuracy"]):
+    ax.set_title(title)
+    ax.set_xlabel("Epoch")
+    ax.set_ylabel(ylab)
+    ax.grid(True, alpha=0.3)
+axes[0].legend(fontsize=8)
+fig.suptitle(f"{MODEL_LABEL}: optimizer comparison")
 plt.tight_layout()
-plt.savefig(
-    RESULTS_DIR / "confusion_matrix.png",
-    dpi=200,
-    bbox_inches="tight",
-)
+plt.savefig(RESULTS_DIR / "optimizer_comparison.png", dpi=150)
 plt.close()
 
-(RESULTS_DIR / "classification_report.txt").write_text(
-    report_text,
-    encoding="utf-8",
-)
+# Confusion matrix
+fig, ax = plt.subplots(figsize=(10, 8))
+ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=class_names).plot(
+    ax=ax, cmap="Blues", xticks_rotation=45, values_format="d", colorbar=False)
+ax.set_title(f"{MODEL_LABEL}: Test Confusion Matrix")
+plt.tight_layout()
+plt.savefig(RESULTS_DIR / "confusion_matrix.png", dpi=200, bbox_inches="tight")
+plt.close()
 
 print(f"\nResults saved to: {RESULTS_DIR}")

@@ -1,0 +1,9 @@
+Model B (Lightweight CNN): optimizer comparison (30 epochs each, same seed/init)
+
+Optimizer                          BestValLoss  @Ep  ValAcc  TestAcc  MacroF1  s/epoch
+--------------------------------------------------------------------------------------
+Adam (lr=1e-4)                          1.2242   30  0.5933   0.5835   0.5444     2.59
+SGD (lr=0.01, momentum=0)               1.2914   29  0.5835   0.5806   0.5400     1.91
+SGD + Momentum 0.5 (lr=0.01)            1.2756   30  0.5905   0.5778   0.5379     2.06
+SGD + Momentum 0.9 (lr=0.01)            1.0216   29  0.6396   0.6269   0.6033     2.17
+SGD + Momentum 0.99 (lr=0.01)           1.1178   30  0.5849   0.5919   0.5645     2.11

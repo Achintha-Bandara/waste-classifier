@@ -1,0 +1,9 @@
+Model A (Standard CNN): optimizer comparison (30 epochs each, same seed/init)
+
+Optimizer                          BestValLoss  @Ep  ValAcc  TestAcc  MacroF1  s/epoch
+--------------------------------------------------------------------------------------
+Adam (lr=1e-4)                          0.8356   30  0.7125   0.6844   0.6785     2.34
+SGD (lr=0.01, momentum=0)               0.8656   29  0.7083   0.6662   0.6636     1.79
+SGD + Momentum 0.5 (lr=0.01)            0.8820   30  0.6957   0.6662   0.6655     1.96
+SGD + Momentum 0.9 (lr=0.01)            2.1414    6  0.1935   0.1935   0.0360     2.01
+SGD + Momentum 0.99 (lr=0.01)           2.1414   27  0.1935   0.1935   0.0360     2.06

@@ -1,0 +1,19 @@
+Layer                       Type                  Output shape          Params   Trainable          MACs
+--------------------------------------------------------------------------------------------------------
+conv2d                      Conv2D                (64, 64, 32)             896         896     3,538,944
+max_pooling2d               MaxPooling2D          (32, 32, 32)               0           0             0
+conv2d_1                    Conv2D                (32, 32, 64)          18,432      18,432    18,874,368
+batch_normalization         BatchNormalization    (32, 32, 64)             256         128             0
+activation                  Activation            (32, 32, 64)               0           0             0
+max_pooling2d_1             MaxPooling2D          (16, 16, 64)               0           0             0
+dropout                     Dropout               (16, 16, 64)               0           0             0
+conv2d_2                    Conv2D                (16, 16, 128)         73,728      73,728    18,874,368
+batch_normalization_1       BatchNormalization    (16, 16, 128)            512         256             0
+activation_1                Activation            (16, 16, 128)              0           0             0
+max_pooling2d_2             MaxPooling2D          (8, 8, 128)                0           0             0
+flatten                     Flatten               (8192,)                    0           0             0
+dense                       Dense                 (128,)             1,048,704   1,048,704     1,048,576
+dropout_1                   Dropout               (128,)                     0           0             0
+dense_1                     Dense                 (9,)                   1,161       1,161         1,152
+--------------------------------------------------------------------------------------------------------
+TOTAL                                                                1,143,689   1,143,305    42,337,408

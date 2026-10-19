@@ -1,0 +1,174 @@
+[
+  {
+    "layer": "conv2d",
+    "type": "Conv2D",
+    "output_shape": [
+      64,
+      64,
+      32
+    ],
+    "total_params": 896,
+    "trainable_params": 896,
+    "macs": 3538944
+  },
+  {
+    "layer": "max_pooling2d",
+    "type": "MaxPooling2D",
+    "output_shape": [
+      32,
+      32,
+      32
+    ],
+    "total_params": 0,
+    "trainable_params": 0,
+    "macs": 0
+  },
+  {
+    "layer": "conv2d_1",
+    "type": "Conv2D",
+    "output_shape": [
+      32,
+      32,
+      64
+    ],
+    "total_params": 18432,
+    "trainable_params": 18432,
+    "macs": 18874368
+  },
+  {
+    "layer": "batch_normalization",
+    "type": "BatchNormalization",
+    "output_shape": [
+      32,
+      32,
+      64
+    ],
+    "total_params": 256,
+    "trainable_params": 128,
+    "macs": 0
+  },
+  {
+    "layer": "activation",
+    "type": "Activation",
+    "output_shape": [
+      32,
+      32,
+      64
+    ],
+    "total_params": 0,
+    "trainable_params": 0,
+    "macs": 0
+  },
+  {
+    "layer": "max_pooling2d_1",
+    "type": "MaxPooling2D",
+    "output_shape": [
+      16,
+      16,
+      64
+    ],
+    "total_params": 0,
+    "trainable_params": 0,
+    "macs": 0
+  },
+  {
+    "layer": "dropout",
+    "type": "Dropout",
+    "output_shape": [
+      16,
+      16,
+      64
+    ],
+    "total_params": 0,
+    "trainable_params": 0,
+    "macs": 0
+  },
+  {
+    "layer": "conv2d_2",
+    "type": "Conv2D",
+    "output_shape": [
+      16,
+      16,
+      128
+    ],
+    "total_params": 73728,
+    "trainable_params": 73728,
+    "macs": 18874368
+  },
+  {
+    "layer": "batch_normalization_1",
+    "type": "BatchNormalization",
+    "output_shape": [
+      16,
+      16,
+      128
+    ],
+    "total_params": 512,
+    "trainable_params": 256,
+    "macs": 0
+  },
+  {
+    "layer": "activation_1",
+    "type": "Activation",
+    "output_shape": [
+      16,
+      16,
+      128
+    ],
+    "total_params": 0,
+    "trainable_params": 0,
+    "macs": 0
+  },
+  {
+    "layer": "max_pooling2d_2",
+    "type": "MaxPooling2D",
+    "output_shape": [
+      8,
+      8,
+      128
+    ],
+    "total_params": 0,
+    "trainable_params": 0,
+    "macs": 0
+  },
+  {
+    "layer": "flatten",
+    "type": "Flatten",
+    "output_shape": [
+      8192
+    ],
+    "total_params": 0,
+    "trainable_params": 0,
+    "macs": 0
+  },
+  {
+    "layer": "dense",
+    "type": "Dense",
+    "output_shape": [
+      128
+    ],
+    "total_params": 1048704,
+    "trainable_params": 1048704,
+    "macs": 1048576
+  },
+  {
+    "layer": "dropout_1",
+    "type": "Dropout",
+    "output_shape": [
+      128
+    ],
+    "total_params": 0,
+    "trainable_params": 0,
+    "macs": 0
+  },
+  {
+    "layer": "dense_1",
+    "type": "Dense",
+    "output_shape": [
+      9
+    ],
+    "total_params": 1161,
+    "trainable_params": 1161,
+    "macs": 1152
+  }
+]
