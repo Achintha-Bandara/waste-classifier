@@ -104,12 +104,12 @@ custom-model entries show the strongest recorded optimizer configuration for
 each architecture. Exact values can vary with the random seed, hardware,
 TensorFlow version, and training settings.
 
-| Model | Configuration | Accuracy | Macro precision | Macro recall | Macro F1 |
-|---|---|---:|---:|---:|---:|---:|
-| Model A | SGD, learning rate `0.01` | ~76.3% | ~0.77 | ~0.76 | ~0.76 |
-| Model B | Adam, learning rate `1e-3` | ~76.0% | ~0.77 | ~0.77 | ~0.77 |
-| MobileNetV2 | ImageNet pretrained | ~79.0% | ~0.80 | ~0.80 | ~0.79 |
-| EfficientNet-B0 | ImageNet pretrained | ~79.0% | ~0.80 | ~0.79 | ~0.79 |
+| Model | Configuration | Accuracy | Macro precision | Macro recall | Macro F1 |  
+|---|---|---:|---:|---:|---:|  
+| Model A | SGD, learning rate `0.01` | ~76.3% | ~0.77 | ~0.76 | ~0.76 |  
+| Model B | Adam, learning rate `1e-3` | ~76.0% | ~0.77 | ~0.77 | ~0.77 |  
+| MobileNetV2 | ImageNet pretrained | ~79.0% | ~0.80 | ~0.80 | ~0.79 |  
+| EfficientNet-B0 | ImageNet pretrained | ~79.0% | ~0.80 | ~0.79 | ~0.79 |  
 
 Model B achieves nearly the same overall accuracy as Model A while using only
 about 88,000 parameters and approximately 6.48 million MACs. Its median epoch
