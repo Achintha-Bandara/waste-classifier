@@ -1,11 +1,11 @@
-python modelB.py
+python modelA.py --optimizer adam
 {
+  "arch": "deep",
   "aug": "none",
   "epochs": 50,
-  "optimizers": "adam,sgd,sgd_m0.9",
+  "optimizer": "adam",
   "batch_size": 32,
   "seed": 42,
   "dataset": null,
-  "tag": "modelB",
   "no_cache": false
 }

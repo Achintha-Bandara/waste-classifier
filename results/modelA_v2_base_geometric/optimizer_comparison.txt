@@ -1,5 +1,0 @@
-Model A (Standard CNN, improved): optimizer comparison (50 epochs each, same seed/init)
-
-Optimizer                          BestValLoss  @Ep  ValAcc  TestAcc  MacroF1  s/epoch
---------------------------------------------------------------------------------------
-Adam (lr=1e-4)                          1.1752   50  0.6269   0.6031   0.5669     2.23

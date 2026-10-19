@@ -1,38 +1,4 @@
-"""
-Model A - Standard CNN (Conv2D + MaxPooling2D)
-
-Assignment items covered by this script
-  1. Data preparation : 64x64 images, stratified 70/15/15 split
-  2. Architecture     : per-layer parameter table + trainable-parameter count + MACs
-  3. Optimizers       : Adam vs SGD vs SGD+Momentum (plus a momentum sweep and a
-                        convergence/momentum analysis)
-  4. Training/eval    : >= 20 epochs, loss curves, accuracy, confusion matrix,
-                        precision, recall, model size, time per epoch
-
-Usage examples
-  # just run it: deep net, no augmentation, 50 epochs, Adam vs SGD vs
-  # SGD+Momentum(0.9). All settings are defaults, no arguments needed.
-  python modelA.py
-
-  # full momentum sweep (0, 0.5, 0.9) plus both Adam learning rates
-  python modelA.py --optimizers all
-
-  # only Adam (single run, no comparison)
-  python modelA.py --optimizers adam
-
-  # pick explicit optimizers and number of epochs
-  python modelA.py --optimizers adam,sgd,sgd_m0.5,sgd_m0.9 --epochs 30
-
-Every run records the exact command line and all arguments in
-run_metadata.json and command.txt inside the results folder.
-
-Hardware-aware activation choice
-  * ReLU = max(0, x): one comparison, no exponential, no division, trivially
-    quantisable to int8. Sigmoid / tanh / swish / GELU / ELU all need exp().
-  * The output layer emits raw logits (no softmax). The softmax exponential is
-    only needed for training; at inference argmax(logits) == argmax(softmax),
-    so the exp() is never computed on the device.
-"""
+"""Train Model A with one selected optimizer."""
 import os
 import sys
 import json
@@ -58,9 +24,6 @@ from sklearn.metrics import (
     recall_score,
 )
 
-# ----------------------------------------------------------------------------
-# Optimizer registry
-# ----------------------------------------------------------------------------
 OPTIMIZER_REGISTRY = {
     "adam": {"label": "Adam (lr=1e-4)",
              "make": lambda: keras.optimizers.Adam(learning_rate=1e-4)},
@@ -73,14 +36,8 @@ OPTIMIZER_REGISTRY = {
     "sgd_m0.9": {"label": "SGD + Momentum 0.9 (lr=0.01)",
                  "make": lambda: keras.optimizers.SGD(learning_rate=1e-2, momentum=0.9)},
 }
-DEFAULT_OPTIMIZERS = "adam,sgd,sgd_m0.9"  # the three the assignment asks for
-SGD_FAMILY = ["sgd", "sgd_m0.5", "sgd_m0.9"]
-
-# ----------------------------------------------------------------------------
-# Command-line configuration (env vars still work as defaults)
-# ----------------------------------------------------------------------------
 parser = argparse.ArgumentParser(
-    description="Model A (standard CNN) training with optimizer comparison.",
+    description="Train Model A (standard CNN) with one optimizer.",
     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 parser.add_argument("--arch", choices=["base", "deep"],
                     default=os.environ.get("ARCH", "deep"),
@@ -91,16 +48,13 @@ parser.add_argument("--aug", choices=["none", "geometric", "full"],
 parser.add_argument("--epochs", type=int,
                     default=int(os.environ.get("EPOCHS", 50)),
                     help="epochs per optimizer (assignment requires >= 20)")
-parser.add_argument("--optimizers",
-                    default=os.environ.get("OPT_KEYS") or DEFAULT_OPTIMIZERS,
-                    help="comma-separated keys from "
-                         f"{list(OPTIMIZER_REGISTRY)} or 'all'")
+parser.add_argument("--optimizer", required=True, choices=list(OPTIMIZER_REGISTRY),
+                    help="optimizer key")
 parser.add_argument("--batch-size", type=int, default=32)
 parser.add_argument("--seed", type=int, default=42)
 parser.add_argument("--dataset", default=os.environ.get("DATASET_DIR"),
                     help="dataset root (one sub-folder per class); "
                          "default: <script dir>/dataset6")
-parser.add_argument("--tag", default="modelA_v2", help="results folder prefix")
 parser.add_argument("--no-cache", action="store_true",
                     help="do not cache decoded images in RAM")
 args = parser.parse_args()
@@ -108,19 +62,8 @@ args = parser.parse_args()
 if args.epochs < 20:
     print(f"WARNING: --epochs={args.epochs} is below the assignment minimum of 20.")
 
-if args.optimizers.strip().lower() == "all":
-    opt_keys = list(OPTIMIZER_REGISTRY)
-else:
-    opt_keys = [k.strip() for k in args.optimizers.split(",") if k.strip()]
-unknown = [k for k in opt_keys if k not in OPTIMIZER_REGISTRY]
-if unknown:
-    parser.error(f"unknown optimizer key(s) {unknown}; "
-                 f"choose from {list(OPTIMIZER_REGISTRY)} or 'all'")
-# de-duplicate, keep order; the first entry is listed first in tables
-opt_keys = list(dict.fromkeys(opt_keys))
-OPTIMIZERS = [{"key": k, **OPTIMIZER_REGISTRY[k]} for k in opt_keys]
-
-MODEL_TAG = args.tag
+OPTIMIZER_KEY = args.optimizer
+OPTIMIZER = {"key": OPTIMIZER_KEY, **OPTIMIZER_REGISTRY[OPTIMIZER_KEY]}
 MODEL_LABEL = "Model A (Standard CNN, improved)"
 PARAM_LIMIT = None  # no limit for Model A
 
@@ -133,21 +76,18 @@ EPOCHS = args.epochs
 AUG_MODE = args.aug
 ARCH = args.arch
 USE_CACHE = not args.no_cache
-RESULTS_DIR = PROJECT_DIR / "results" / f"{MODEL_TAG}"
+RESULTS_DIR = PROJECT_DIR / "results" / "modelA" / OPTIMIZER_KEY
 RESULTS_DIR.mkdir(parents=True, exist_ok=True)
 
 COMMAND_LINE = "python " + " ".join(
     [Path(sys.argv[0]).name] + sys.argv[1:])
 print(f"\nCommand : {COMMAND_LINE}")
 print(f"Arguments: arch={ARCH} aug={AUG_MODE} epochs={EPOCHS} "
-      f"optimizers={opt_keys} batch={BATCH_SIZE} seed={SEED} cache={USE_CACHE}")
+      f"optimizer={OPTIMIZER_KEY} batch={BATCH_SIZE} seed={SEED} cache={USE_CACHE}")
 (RESULTS_DIR / "command.txt").write_text(
     COMMAND_LINE + "\n" + json.dumps(vars(args), indent=2) + "\n",
     encoding="utf-8")
 
-# ----------------------------------------------------------------------------
-# Data preparation
-# ----------------------------------------------------------------------------
 class_names = sorted(p.name for p in DATASET_DIR.iterdir() if p.is_dir())
 class_to_idx = {name: i for i, name in enumerate(class_names)}
 num_classes = len(class_names)
@@ -170,7 +110,6 @@ for name, idx in class_to_idx.items():
 print(f"\nTotal images: {len(paths)}")
 print(f"Number of classes: {num_classes}")
 
-# Stratified 70% / 15% / 15% split
 X_train, X_temp, y_train, y_temp = train_test_split(
     paths, labels, test_size=0.30, stratify=labels, random_state=SEED)
 X_val, X_test, y_val, y_test = train_test_split(
@@ -227,9 +166,6 @@ val_ds = make_dataset(X_val, y_val)
 test_ds = make_dataset(X_test, y_test)
 
 
-# ----------------------------------------------------------------------------
-# ===== MODEL DEFINITION (START) =====
-# ----------------------------------------------------------------------------
 def build_model_deep():
     """Model A v2: VGG-style stages, each = 2 x (Conv2D 3x3 -> BN -> ReLU) then
     MaxPooling2D. Output = logits."""
@@ -260,25 +196,21 @@ def build_model_base():
     return keras.Sequential([
         layers.Input(shape=(64, 64, 3)),
 
-        # Block 1: 3x3 conv, 32 filters
         layers.Conv2D(32, kernel_size=(3, 3), padding="same",
                       activation="relu"),
         layers.MaxPooling2D(pool_size=(2, 2)),
 
-        # Block 2: 3x3 conv, 64 filters + BN
         layers.Conv2D(64, kernel_size=(3, 3), padding="same", use_bias=False),
         layers.BatchNormalization(),
         layers.Activation("relu"),
         layers.MaxPooling2D(pool_size=(2, 2)),
         layers.Dropout(0.10),
 
-        # Block 3: 3x3 conv, 128 filters + BN
         layers.Conv2D(128, kernel_size=(3, 3), padding="same", use_bias=False),
         layers.BatchNormalization(),
         layers.Activation("relu"),
         layers.MaxPooling2D(pool_size=(2, 2)),
 
-        # Classification head: Flatten -> FC(128) -> FC(num_classes)
         layers.Flatten(),
         layers.Dense(128, activation="relu"),
         layers.Dropout(0.25),
@@ -288,11 +220,6 @@ def build_model_base():
 
 def build_model():
     return build_model_deep() if ARCH == "deep" else build_model_base()
-# ----------------------------------------------------------------------------
-# ===== MODEL DEFINITION (END) =====
-# ----------------------------------------------------------------------------
-
-
 def layer_breakdown(model):
     """Per-layer output shape, parameters (total / trainable) and MACs."""
     rows = []
@@ -424,7 +351,6 @@ def run_experiment(opt_cfg):
         "final_training_accuracy": float(history.history["accuracy"][-1]),
         "final_validation_loss": float(val_loss[-1]),
         "final_validation_accuracy": float(val_acc[-1]),
-        # convergence-speed indicators used in the momentum analysis
         "epochs_to_val_acc_60": first_epoch_reaching(val_acc, 0.60),
         "epochs_to_val_acc_70": first_epoch_reaching(val_acc, 0.70),
         "epochs_to_val_loss_1.0": first_epoch_reaching(val_loss, 1.0, "le"),
@@ -449,9 +375,6 @@ def run_experiment(opt_cfg):
     return model, preds, result, weights_path
 
 
-# ----------------------------------------------------------------------------
-# Architecture report (parameters, MACs, size)
-# ----------------------------------------------------------------------------
 keras.utils.set_random_seed(SEED)
 arch_model = build_model()
 arch_model.summary()
@@ -481,25 +404,8 @@ if PARAM_LIMIT is not None:
 (RESULTS_DIR / "layer_breakdown.json").write_text(json.dumps(rows, indent=2), encoding="utf-8")
 del arch_model
 
-# ----------------------------------------------------------------------------
-# Run all optimizer experiments
-# ----------------------------------------------------------------------------
-results, runs = {}, {}
-for cfg in OPTIMIZERS:
-    model, preds, res, weights_path = run_experiment(cfg)
-    results[cfg["key"]] = res
-    runs[cfg["key"]] = (model, preds)
-    weights_path.unlink(missing_ok=True)
-
-# Select the optimizer by VALIDATION loss (never by test accuracy)
-MAIN_OPTIMIZER_KEY = min(results, key=lambda k: results[k]["best_validation_loss"])
-main_model, main_preds = runs[MAIN_OPTIMIZER_KEY]
-main_res = results[MAIN_OPTIMIZER_KEY]
-print(f"\nSelected optimizer (lowest validation loss): {main_res['label']}")
-
-# ----------------------------------------------------------------------------
-# Save artifacts for the chosen (main) optimizer
-# ----------------------------------------------------------------------------
+main_model, main_preds, main_res, weights_path = run_experiment(OPTIMIZER)
+weights_path.unlink(missing_ok=True)
 model_path = RESULTS_DIR / "model.keras"
 main_model.save(model_path)
 disk_size_kb = model_path.stat().st_size / 1024
@@ -554,6 +460,7 @@ final_metrics = {
     json.dumps({**main_res["history"], "epoch_time_seconds": main_res["epoch_time_seconds"]}, indent=2),
     encoding="utf-8")
 (RESULTS_DIR / "classification_report.txt").write_text(report_text, encoding="utf-8")
+np.savetxt(RESULTS_DIR / "confusion_matrix.csv", cm, delimiter=",", fmt="%d")
 
 (RESULTS_DIR / "run_metadata.json").write_text(json.dumps({
     "created_at_utc": datetime.now(timezone.utc).isoformat(),
@@ -565,8 +472,7 @@ final_metrics = {
     "batch_size": BATCH_SIZE,
     "epochs_requested": EPOCHS,
     "seed": SEED,
-    "optimizers_compared": [r["label"] for r in results.values()],
-    "main_optimizer": main_res["label"],
+    "optimizer": main_res["label"],
     "loss": "SparseCategoricalCrossentropy(from_logits=True)",
     "augmentation": AUG_MODE,
     "architecture": ARCH,
@@ -579,90 +485,6 @@ final_metrics = {
     "test_images": len(X_test),
 }, indent=2), encoding="utf-8")
 
-# ----------------------------------------------------------------------------
-# Optimizer comparison table (Adam vs SGD vs SGD+Momentum)
-# ----------------------------------------------------------------------------
-def fmt_ep(v):
-    return "-" if v is None else str(v)
-
-
-lines = [
-    f"{MODEL_LABEL} [{ARCH}, aug={AUG_MODE}]: optimizer comparison "
-    f"({EPOCHS} epochs each, same seed/init)",
-    f"Command: {COMMAND_LINE}",
-    "",
-    f"{'Optimizer':34s}{'BestValLoss':>12s}{'@Ep':>5s}{'ValAcc':>8s}{'TestAcc':>9s}"
-    f"{'MacroF1':>9s}{'Prec':>7s}{'Rec':>7s}{'s/ep(med)':>10s}",
-    "-" * 101,
-]
-for r in results.values():
-    lines.append(
-        f"{r['label']:34s}{r['best_validation_loss']:>12.4f}"
-        f"{r['best_validation_loss_epoch']:>5d}{r['best_validation_accuracy']:>8.4f}"
-        f"{r['test_accuracy']:>9.4f}{r['test_f1_macro']:>9.4f}"
-        f"{r['test_precision_macro']:>7.3f}{r['test_recall_macro']:>7.3f}"
-        f"{r['median_epoch_time_seconds']:>10.2f}")
-comparison_text = "\n".join(lines)
-print("\n" + comparison_text)
-(RESULTS_DIR / "optimizer_comparison.txt").write_text(comparison_text, encoding="utf-8")
-(RESULTS_DIR / "optimizer_comparison.json").write_text(json.dumps(results, indent=2), encoding="utf-8")
-
-# ----------------------------------------------------------------------------
-# Convergence / momentum analysis
-# ----------------------------------------------------------------------------
-conv_lines = [
-    f"Convergence analysis [{ARCH}, aug={AUG_MODE}] (lower epoch numbers = faster)",
-    "",
-    f"{'Optimizer':34s}{'Ep->70%acc':>11s}{'Ep->60%acc':>11s}{'Ep->vl<1.0':>11s}"
-    f"{'Ep->5%best':>11s}{'TrL@5':>8s}{'TrL@10':>8s}{'ValLossStd10':>14s}{'TrainVal gap':>14s}",
-    "-" * 122,
-]
-for r in results.values():
-    t5 = "-" if r["train_loss_epoch_5"] is None else f"{r['train_loss_epoch_5']:.3f}"
-    t10 = "-" if r["train_loss_epoch_10"] is None else f"{r['train_loss_epoch_10']:.3f}"
-    conv_lines.append(
-        f"{r['label']:34s}{fmt_ep(r['epochs_to_val_acc_70']):>11s}"
-        f"{fmt_ep(r['epochs_to_val_acc_60']):>11s}{fmt_ep(r['epochs_to_val_loss_1.0']):>11s}"
-        f"{fmt_ep(r['epochs_to_within_5pct_best_val_loss']):>11s}{t5:>8s}{t10:>8s}"
-        f"{r['val_loss_std_last10']:>14.4f}{r['generalisation_gap_acc']:>14.3f}")
-
-present_sgd = [k for k in SGD_FAMILY if k in results]
-if len(present_sgd) >= 2:
-    conv_lines += ["", "Momentum effect (SGD family, lr=0.01):"]
-    base = results[present_sgd[0]]
-    for k in present_sgd[1:]:
-        r = results[k]
-        d_loss = base["best_validation_loss"] - r["best_validation_loss"]
-        d_acc = r["test_accuracy"] - base["test_accuracy"]
-        conv_lines.append(
-            f"  {r['label']} vs {base['label']}: best val loss "
-            f"{'lower' if d_loss > 0 else 'higher'} by {abs(d_loss):.4f}, "
-            f"test accuracy {'+' if d_acc >= 0 else '-'}{abs(d_acc) * 100:.2f} pts, "
-            f"epochs to 70% val acc: {fmt_ep(r['epochs_to_val_acc_70'])} vs "
-            f"{fmt_ep(base['epochs_to_val_acc_70'])}")
-    conv_lines += [
-        "",
-        "Interpretation guide: momentum m accumulates a velocity v <- m*v - lr*grad,",
-        "so the effective step in a consistent gradient direction is ~lr/(1-m)",
-        "(x2 for m=0.5, x10 for m=0.9). This speeds up progress along shallow,",
-        "consistent directions and damps oscillation across steep ones, but a high",
-        "m can overshoot and make validation loss noisier (see ValLossStd10).",
-    ]
-if any(k.startswith("adam") for k in results):
-    conv_lines += [
-        "",
-        "Adam keeps per-parameter running estimates of the gradient mean and",
-        "squared gradient, giving each weight its own adaptive step size; this is",
-        "why it usually needs far less learning-rate tuning than plain SGD.",
-    ]
-convergence_text = "\n".join(conv_lines)
-print("\n" + convergence_text)
-(RESULTS_DIR / "convergence_analysis.txt").write_text(convergence_text, encoding="utf-8")
-
-# ----------------------------------------------------------------------------
-# Plots
-# ----------------------------------------------------------------------------
-# Class distribution
 plt.figure(figsize=(12, 6))
 plt.bar(class_names, [class_counts[class_to_idx[n]] for n in class_names])
 plt.title("Images per Class")
@@ -674,7 +496,6 @@ plt.tight_layout()
 plt.savefig(RESULTS_DIR / "class_distribution.png", dpi=150)
 plt.close()
 
-# Training / validation loss and accuracy (chosen optimizer)
 epochs_axis = range(1, main_res["epochs_completed"] + 1)
 h = main_res["history"]
 
@@ -702,59 +523,6 @@ plt.tight_layout()
 plt.savefig(RESULTS_DIR / "accuracy_curve.png", dpi=150)
 plt.close()
 
-# Optimizer comparison curves (train loss, val loss, val acc) + test accuracy bars
-if len(results) > 1:
-    fig, axes = plt.subplots(1, 4, figsize=(24, 5))
-    for r in results.values():
-        ep = range(1, r["epochs_completed"] + 1)
-        axes[0].plot(ep, r["history"]["loss"], label=r["label"])
-        axes[1].plot(ep, r["history"]["val_loss"], label=r["label"])
-        axes[2].plot(ep, r["history"]["val_accuracy"], label=r["label"])
-    for ax, title, ylab in zip(
-            axes[:3],
-            ["Training loss", "Validation loss", "Validation accuracy"],
-            ["Loss", "Loss", "Accuracy"]):
-        ax.set_title(title)
-        ax.set_xlabel("Epoch")
-        ax.set_ylabel(ylab)
-        ax.grid(True, alpha=0.3)
-    axes[0].legend(fontsize=8)
-    short = [r["label"].replace(" (", "\n(") for r in results.values()]
-    accs = [r["test_accuracy"] for r in results.values()]
-    bars = axes[3].bar(range(len(accs)), accs)
-    axes[3].set_xticks(range(len(accs)))
-    axes[3].set_xticklabels(short, fontsize=7)
-    axes[3].set_ylim(max(0.0, min(accs) - 0.1), min(1.0, max(accs) + 0.05))
-    axes[3].set_title("Test accuracy")
-    axes[3].grid(axis="y", alpha=0.3)
-    for b, a in zip(bars, accs):
-        axes[3].text(b.get_x() + b.get_width() / 2, a, f"{a:.3f}",
-                     ha="center", va="bottom", fontsize=8)
-    fig.suptitle(f"{MODEL_LABEL} [{ARCH}, aug={AUG_MODE}]: optimizer comparison")
-    plt.tight_layout()
-    plt.savefig(RESULTS_DIR / "optimizer_comparison.png", dpi=150)
-    plt.close()
-
-# Momentum effect plot (SGD family only)
-if len(present_sgd) >= 2:
-    fig, axes = plt.subplots(1, 3, figsize=(18, 5))
-    for k in present_sgd:
-        r = results[k]
-        ep = range(1, r["epochs_completed"] + 1)
-        axes[0].plot(ep, r["history"]["loss"], label=r["label"])
-        axes[1].plot(ep, r["history"]["val_loss"], label=r["label"])
-        axes[2].plot(ep, r["history"]["val_accuracy"], label=r["label"])
-    for ax, title in zip(axes, ["Training loss", "Validation loss", "Validation accuracy"]):
-        ax.set_title(title)
-        ax.set_xlabel("Epoch")
-        ax.grid(True, alpha=0.3)
-    axes[0].legend(fontsize=8)
-    fig.suptitle(f"Effect of momentum on SGD convergence ({MODEL_LABEL}, lr=0.01)")
-    plt.tight_layout()
-    plt.savefig(RESULTS_DIR / "momentum_effect.png", dpi=150)
-    plt.close()
-
-# Confusion matrix (chosen optimizer)
 fig, ax = plt.subplots(figsize=(10, 8))
 ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=class_names).plot(
     ax=ax, cmap="Blues", xticks_rotation=45, values_format="d", colorbar=False)
