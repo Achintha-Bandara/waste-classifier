@@ -1,0 +1,43 @@
+{
+  "created_at_utc": "2026-10-19T03:22:59.479427+00:00",
+  "model": "Model A (Standard CNN, improved)",
+  "dataset": "/mnt/c/Users/achin/Documents/Semester 5 Modules/EN3150 - Pattern Recognition/waste-classifier/dataset6",
+  "image_size": [
+    64,
+    64
+  ],
+  "batch_size": 32,
+  "epochs_requested": 50,
+  "seed": 42,
+  "main_optimizer": "Adam (lr=1e-4)",
+  "loss": "SparseCategoricalCrossentropy(from_logits=True)",
+  "augmentation": "geometric",
+  "architecture": "base",
+  "lr_schedule": "ReduceLROnPlateau(factor=0.5, patience=4, min_lr=1e-6)",
+  "class_names": [
+    "Cardboard",
+    "Food Organics",
+    "Glass",
+    "Metal",
+    "Miscellaneous Trash",
+    "Paper",
+    "Plastic",
+    "Textile Trash",
+    "Vegetation"
+  ],
+  "class_to_idx": {
+    "Cardboard": 0,
+    "Food Organics": 1,
+    "Glass": 2,
+    "Metal": 3,
+    "Miscellaneous Trash": 4,
+    "Paper": 5,
+    "Plastic": 6,
+    "Textile Trash": 7,
+    "Vegetation": 8
+  },
+  "num_images": 4752,
+  "train_images": 3326,
+  "validation_images": 713,
+  "test_images": 713
+}

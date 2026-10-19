@@ -1,0 +1,198 @@
+{
+  "model": "Model A (Standard CNN, improved)",
+  "optimizer": "Adam (lr=1e-4)",
+  "test_loss": 1.3591355085372925,
+  "test_accuracy": 0.5273492336273193,
+  "test_precision_macro": 0.5678043876193581,
+  "test_recall_macro": 0.4928874933739198,
+  "test_f1_macro": 0.4728859580263047,
+  "test_f1_weighted": 0.4958529827641613,
+  "test_classification_report": {
+    "Cardboard": {
+      "precision": 0.6515151515151515,
+      "recall": 0.6231884057971014,
+      "f1-score": 0.6370370370370371,
+      "support": 69.0
+    },
+    "Food Organics": {
+      "precision": 0.5609756097560976,
+      "recall": 0.3709677419354839,
+      "f1-score": 0.44660194174757284,
+      "support": 62.0
+    },
+    "Glass": {
+      "precision": 0.84,
+      "recall": 0.3333333333333333,
+      "f1-score": 0.4772727272727273,
+      "support": 63.0
+    },
+    "Metal": {
+      "precision": 0.6190476190476191,
+      "recall": 0.5508474576271186,
+      "f1-score": 0.5829596412556054,
+      "support": 118.0
+    },
+    "Miscellaneous Trash": {
+      "precision": 0.5,
+      "recall": 0.09333333333333334,
+      "f1-score": 0.15730337078651685,
+      "support": 75.0
+    },
+    "Paper": {
+      "precision": 0.48484848484848486,
+      "recall": 0.64,
+      "f1-score": 0.5517241379310345,
+      "support": 75.0
+    },
+    "Plastic": {
+      "precision": 0.4878048780487805,
+      "recall": 0.7246376811594203,
+      "f1-score": 0.5830903790087464,
+      "support": 138.0
+    },
+    "Textile Trash": {
+      "precision": 0.5384615384615384,
+      "recall": 0.14583333333333334,
+      "f1-score": 0.22950819672131148,
+      "support": 48.0
+    },
+    "Vegetation": {
+      "precision": 0.42758620689655175,
+      "recall": 0.9538461538461539,
+      "f1-score": 0.5904761904761905,
+      "support": 65.0
+    },
+    "accuracy": 0.5273492286115007,
+    "macro avg": {
+      "precision": 0.5678043876193581,
+      "recall": 0.4928874933739198,
+      "f1-score": 0.4728859580263047,
+      "support": 713.0
+    },
+    "weighted avg": {
+      "precision": 0.5617428038370832,
+      "recall": 0.5273492286115007,
+      "f1-score": 0.4958529827641613,
+      "support": 713.0
+    }
+  },
+  "confusion_matrix": [
+    [
+      43,
+      3,
+      3,
+      3,
+      0,
+      2,
+      12,
+      0,
+      3
+    ],
+    [
+      1,
+      23,
+      0,
+      0,
+      0,
+      0,
+      7,
+      0,
+      31
+    ],
+    [
+      1,
+      1,
+      21,
+      3,
+      0,
+      5,
+      22,
+      0,
+      10
+    ],
+    [
+      2,
+      3,
+      0,
+      65,
+      2,
+      14,
+      26,
+      1,
+      5
+    ],
+    [
+      2,
+      5,
+      0,
+      11,
+      7,
+      6,
+      27,
+      1,
+      16
+    ],
+    [
+      13,
+      1,
+      1,
+      6,
+      0,
+      48,
+      6,
+      0,
+      0
+    ],
+    [
+      1,
+      5,
+      0,
+      11,
+      3,
+      7,
+      100,
+      4,
+      7
+    ],
+    [
+      0,
+      0,
+      0,
+      6,
+      2,
+      17,
+      5,
+      7,
+      11
+    ],
+    [
+      3,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      62
+    ]
+  ],
+  "trainable_parameters": 1337321,
+  "non_trainable_parameters": 896,
+  "total_parameters": 1338217,
+  "macs_per_inference": 155583616,
+  "float32_weight_size_kb": 5227.41015625,
+  "model_file_size_kb": 15783.7666015625,
+  "epochs_completed": 80,
+  "best_validation_loss": 1.3587623834609985,
+  "best_validation_loss_epoch": 7,
+  "best_validation_accuracy": 0.5441794991493225,
+  "best_validation_accuracy_epoch": 7,
+  "final_training_loss": 0.8446928858757019,
+  "final_training_accuracy": 0.6984365582466125,
+  "final_validation_loss": 1.82034432888031,
+  "final_validation_accuracy": 0.49509117007255554,
+  "total_training_time_seconds": 320.1180436699997,
+  "average_epoch_time_seconds": 4.000647661474977,
+  "median_epoch_time_seconds": 3.637285115499708
+}
