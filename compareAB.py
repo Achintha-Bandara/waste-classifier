@@ -1,4 +1,4 @@
-"""Compare every saved Model A and Model B optimizer run."""
+"""Compare every saved modelA and modelB optimizer run."""
 
 import argparse
 import csv
@@ -95,7 +95,7 @@ def build_csv_rows(results):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Compare every saved Model A and Model B optimizer run."
+        description="Compare every saved modelA and modelB optimizer run."
     )
     parser.add_argument(
         "--results-dir",

@@ -1,4 +1,4 @@
-"""Train Model B with one selected optimizer."""
+"""Train modelB with one selected optimizer."""
 import os
 import sys
 import json
@@ -37,7 +37,7 @@ OPTIMIZER_REGISTRY = {
                  "make": lambda: keras.optimizers.SGD(learning_rate=1e-2, momentum=0.9)},
 }
 parser = argparse.ArgumentParser(
-    description="Train Model B (depthwise separable CNN) with one optimizer.",
+    description="Train modelB (depthwise separable CNN) with one optimizer.",
     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 parser.add_argument("--aug", choices=["none", "geometric", "full"],
                     default=os.environ.get("AUG_MODE", "none"),
@@ -61,8 +61,8 @@ if args.epochs < 20:
 
 OPTIMIZER_KEY = args.optimizer
 OPTIMIZER = {"key": OPTIMIZER_KEY, **OPTIMIZER_REGISTRY[OPTIMIZER_KEY]}
-MODEL_LABEL = "Model B (Lightweight CNN, depthwise separable)"
-PARAM_LIMIT = 100_000  # assignment: trainable parameters of Model B <= 100,000
+MODEL_LABEL = "modelB"
+PARAM_LIMIT = 100_000
 
 PROJECT_DIR = Path(__file__).resolve().parent
 DATASET_DIR = Path(args.dataset) if args.dataset else PROJECT_DIR / "dataset6"
@@ -171,7 +171,7 @@ def sep_block(filters):
 
 
 def build_model():
-    """Model B: depthwise-separable CNN, logits output.
+    """modelB: depthwise-separable CNN, logits output.
 
     Hand-computed trainable parameters (BN counts gamma+beta = 2*C):
       stem   Conv2D 3x3 3->16            432  + BN 32           =    464
@@ -279,7 +279,7 @@ def first_epoch_reaching(values, threshold, mode="ge"):
 
 
 def run_experiment(opt_cfg):
-    """Train a fresh Model B with one optimizer for EPOCHS epochs (no early
+    """Train a fresh modelB with one optimizer for EPOCHS epochs (no early
     stopping, so every run completes >= 20 epochs), restore the best
     validation-loss weights, then evaluate on the test set."""
     print(f"\n{'=' * 70}\nTraining {MODEL_LABEL} with {opt_cfg['label']}\n{'=' * 70}")

@@ -1,4 +1,4 @@
-"""Train Model A with one selected optimizer."""
+"""Train modelA with one selected optimizer."""
 import os
 import sys
 import json
@@ -37,7 +37,7 @@ OPTIMIZER_REGISTRY = {
                  "make": lambda: keras.optimizers.SGD(learning_rate=1e-2, momentum=0.9)},
 }
 parser = argparse.ArgumentParser(
-    description="Train Model A (standard CNN) with one optimizer.",
+    description="Train modelA (standard CNN) with one optimizer.",
     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 parser.add_argument("--arch", choices=["base", "deep"],
                     default=os.environ.get("ARCH", "deep"),
@@ -64,8 +64,8 @@ if args.epochs < 20:
 
 OPTIMIZER_KEY = args.optimizer
 OPTIMIZER = {"key": OPTIMIZER_KEY, **OPTIMIZER_REGISTRY[OPTIMIZER_KEY]}
-MODEL_LABEL = "Model A (Standard CNN, improved)"
-PARAM_LIMIT = None  # no limit for Model A
+MODEL_LABEL = "modelA"
+PARAM_LIMIT = None
 
 PROJECT_DIR = Path(__file__).resolve().parent
 DATASET_DIR = Path(args.dataset) if args.dataset else PROJECT_DIR / "dataset6"
@@ -167,7 +167,7 @@ test_ds = make_dataset(X_test, y_test)
 
 
 def build_model_deep():
-    """Model A v2: VGG-style stages, each = 2 x (Conv2D 3x3 -> BN -> ReLU) then
+    """modelA deep: VGG-style stages, each = 2 x (Conv2D 3x3 -> BN -> ReLU) then
     MaxPooling2D. Output = logits."""
     def stage(filters, dropout=0.0):
         s = []
@@ -192,7 +192,7 @@ def build_model_deep():
 
 
 def build_model_base():
-    """Model A: standard Conv2D + MaxPool2D CNN. Output = logits."""
+    """modelA: standard Conv2D + MaxPool2D CNN. Output = logits."""
     return keras.Sequential([
         layers.Input(shape=(64, 64, 3)),
 
@@ -286,7 +286,7 @@ def first_epoch_reaching(values, threshold, mode="ge"):
 
 
 def run_experiment(opt_cfg):
-    """Train a fresh Model A with one optimizer for EPOCHS epochs (no early
+    """Train a fresh modelA with one optimizer for EPOCHS epochs (no early
     stopping, so every run completes >= 20 epochs), restore the best
     validation-loss weights, then evaluate on the test set."""
     print(f"\n{'=' * 70}\nTraining {MODEL_LABEL} with {opt_cfg['label']}\n{'=' * 70}")

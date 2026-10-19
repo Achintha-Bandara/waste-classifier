@@ -44,7 +44,7 @@ parser.add_argument("--weights", choices=["imagenet", "none"], default="imagenet
                     help="'none' = random initialisation (no pretraining)")
 parser.add_argument("--aug", choices=["none", "geometric", "full"],
                     default=os.environ.get("AUG_MODE", "none"),
-                    help="training-only augmentation (keep equal to Model A/B)")
+                    help="training-only augmentation (keep equal to modelA/modelB)")
 parser.add_argument("--batch-size", type=int, default=32)
 parser.add_argument("--seed", type=int, default=42)
 parser.add_argument("--dataset", default=os.environ.get("DATASET_DIR"),
@@ -198,7 +198,7 @@ def count_trainable(model):
 
 def count_macs(model):
     """Approximate MACs per inference: Conv2D, DepthwiseConv2D, SeparableConv2D
-    and Dense layers (same convention as Model A / B). Walks into the backbone."""
+    and Dense layers (same convention as modelA/modelB). Walks into the backbone."""
     total = 0
     skipped = 0
 

@@ -1,4 +1,4 @@
-"""Compare saved Model B, MobileNetV2, and EfficientNetB0 results."""
+"""Compare saved modelB, MobileNetV2, and EfficientNetB0 results."""
 
 import argparse
 import csv
@@ -7,7 +7,7 @@ from pathlib import Path
 
 
 MODEL_DIRS = {
-    "Model B": ("modelB",),
+    "modelB": ("modelB",),
     "MobileNetV2": (("mobilenetv2",), ("mobile", "mobilenetv2")),
     "EfficientNetB0": (("efficientnetb0",), ("mobile", "efficientnetb0")),
 }
@@ -32,7 +32,7 @@ METRICS = [
 def load_metrics(results_dir):
     runs = {}
     for label, locations in MODEL_DIRS.items():
-        if label == "Model B":
+        if label == "modelB":
             model_dir = results_dir / locations[0]
             paths = sorted(model_dir.glob("*/metrics.json"))
         else:
@@ -50,7 +50,7 @@ def load_metrics(results_dir):
                 continue
             run_name = (
                 f"modelB_{metrics_path.parent.name}"
-                if label == "Model B"
+                if label == "modelB"
                 else label
             )
             runs[run_name] = {
@@ -86,9 +86,9 @@ def format_value(value, format_spec):
 
 def build_markdown(runs):
     if not runs:
-        return "# Model B and SOTA Comparison\n\nNo saved results found.\n"
+        return "# modelB and SOTA Comparison\n\nNo saved results found.\n"
     lines = [
-        "# Model B and Lightweight SOTA Comparison",
+        "# modelB and Lightweight SOTA Comparison",
         "",
         "Each column is a saved run. Missing models or metrics are shown as `N/A`.",
         "",
@@ -120,7 +120,7 @@ def build_csv_rows(runs):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Compare saved resource-constrained Model B with MobileNetV2 and EfficientNetB0."
+        description="Compare saved resource-constrained modelB with MobileNetV2 and EfficientNetB0."
     )
     parser.add_argument(
         "--results-dir",
