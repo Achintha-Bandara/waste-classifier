@@ -78,3 +78,61 @@ To use another results directory:
 ```powershell
 python compare.py --results-dir path\to\results
 ```
+
+## Mobile/edge pretrained models
+
+`train_mobile_models.py` fine-tunes ImageNet-pretrained MobileNetV2 and
+EfficientNetB0 using the same 70/15/15 stratified split, seed, and 64x64 input
+size as the custom networks:
+
+```powershell
+python train_mobile_models.py --model all
+```
+
+To train only one backbone:
+
+```powershell
+python train_mobile_models.py --model mobilenetv2
+python train_mobile_models.py --model efficientnetb0
+```
+
+The script first trains the classifier head and then fine-tunes the final
+backbone layers. It saves each model under
+`results/mobile/mobilenetv2/` or `results/mobile/efficientnetb0/`.
+ImageNet weights require internet access on the first run. Use
+`--weights` and the other command-line options to customize training.
+
+Evaluate saved mobile models separately:
+
+```powershell
+python evaluate_mobile_models.py
+```
+
+Evaluation writes `evaluation_metrics.json`, a classification report,
+confusion-matrix CSV/plot, and explicitly records `total_parameters` and
+`model_size_mb` for each saved model.
+
+Model-specific entry points are also available:
+
+```powershell
+python mobilenet.py
+python efficientnet.py
+python evaluate_mobilenet.py
+python evaluate_efficientnet.py
+```
+
+These use the same options as the generic scripts, including `--dataset`,
+`--epochs`, `--head-epochs`, `--fine-tune-layers`, `--batch-size`, `--seed`,
+and `--weights` for training, and `--results-dir` for evaluation.
+
+To compare the resource-constrained custom Model B with the saved lightweight
+models, run:
+
+```powershell
+python compareB.py
+```
+
+The comparison reads Model B optimizer results plus saved MobileNetV2 and
+EfficientNetB0 metrics. It writes `comparison_modelB_sota.md`,
+`comparison_modelB_sota.csv`, and `comparison_modelB_sota.json` to `results/`.
+Unavailable models or metrics are reported as `N/A`.

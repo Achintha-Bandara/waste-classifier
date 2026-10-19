@@ -7,35 +7,8 @@ dataset4/
 dataset5/
 dataset6/
 
-# Common dataset file formats
-*.csv
-*.tsv
-*.parquet
-*.jsonl
-
-# Images and archives used for datasets
-*.jpg
-*.jpeg
-*.png
-*.bmp
-*.tif
-*.tiff
-*.webp
-*.zip
-*.7z
-*.tar
-*.gz
-
-# Model weights and checkpoints
-*.h5
-*.hdf5
-*.keras
-*.pt
-*.pth
-*.onnx
-*.ckpt
-checkpoints/
-models/
+#results
+results/
 
 # Python
 __pycache__/

@@ -115,9 +115,9 @@ def main():
     output_dir.mkdir(parents=True, exist_ok=True)
     results = load_results(results_dir)
 
-    markdown_path = output_dir / "comparison_table.md"
-    csv_path = output_dir / "comparison_table.csv"
-    json_path = output_dir / "comparison_table.json"
+    markdown_path = output_dir / "comparison_table_AB.md"
+    csv_path = output_dir / "comparison_table_AB.csv"
+    json_path = output_dir / "comparison_table_AB.json"
 
     markdown_path.write_text(build_markdown(results), encoding="utf-8")
     rows = build_csv_rows(results)
